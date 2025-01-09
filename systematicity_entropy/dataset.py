@@ -9,8 +9,10 @@ BOS_TOKEN = "[BOS]"
 EOS_TOKEN = "[EOS]"
 PAD_TOKEN = "[PAD]"
 TRANSLATION_TOKEN = "[TRANS]"
-SCAN_TOKENIZER_PATH = Path("./static/scan_tokenizer.json")
-PCFG_TOKENIZER_PATH = Path("./static/pcfg_tokenizer.json")
+CURR_FILE_PATH = Path(__file__).resolve()
+CURR_FILE_DIR = CURR_FILE_PATH.parent
+SCAN_TOKENIZER_PATH = CURR_FILE_DIR / "../static/scan_tokenizer.json"
+PCFG_TOKENIZER_PATH = CURR_FILE_DIR / "../static/PCFG_tokenizer.json"
 
 
 class ScanDataset(Dataset):

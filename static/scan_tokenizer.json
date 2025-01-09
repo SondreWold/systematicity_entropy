@@ -1,0 +1,1 @@
+{"RTURN": 0, "LTURN": 1, "walk": 2, "LOOK": 3, "sprint": 4, "turn": 5, "after": 6, "twice": 7, "JUMP": 8, "and": 9, "RUN": 10, "run": 11, "[EOS]": 12, "WALK": 13, "[BOS]": 14, "opposite": 15, "look": 16, "[TRANS]": 17, "thrice": 18, "left": 19, "right": 20, "SPRINT": 21, "[PAD]": 22, "around": 23, "jump": 24}

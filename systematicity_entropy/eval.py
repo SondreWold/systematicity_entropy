@@ -108,13 +108,12 @@ def main():
     )
     args = parse_args()
     set_seed(args.seed)
-    match args.type:
-        case "van":
-            from transformer import Transformer
-        case "rope":
-            from transformer_rope import Transformer
-        case "rel":
-            from transformer_relative import Transformer
+    if args.type == "van":
+        from transformer import Transformer
+    elif args.type == "rope":
+        from transformer_rope import Transformer
+    elif args.type == "rel":
+        from transformer_relative import Transformer
 
     val = DATASET_MAP[args.task](
         args.val_path, args.block_size, device=DEVICE, task=args.task

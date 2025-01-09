@@ -1,1 +1,1 @@
-WANDD_MODE=disabled python systematicity_entropy/eval.py --model_path systematicity_entropy/trained_models/test_uniform/final_model.pt --val_path data/test.txt --task scan --hidden_size 128 --layers 2 --type rel
+WANDB_MODE=disabled python systematicity_entropy/eval.py --model_path systematicity_entropy/trained_models/test_uniform/final_model.pt --val_path data/test.txt --task scan --hidden_size 128 --layers 2 --type rel

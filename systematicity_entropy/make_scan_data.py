@@ -3,7 +3,7 @@ import math
 import re
 from pathlib import Path
 
-from permutations_and_compositions.PCFG import PCFG
+from systematicity_entropy.PCFG import PCFG
 
 ATOMS = {
     "walk": "WALK",

@@ -16,6 +16,7 @@ flake8 = "^7.0.0"
 wandb = "^0.17.3"
 pytest = "^8.2.1"
 pre-commit = "^3.7.1"
+nltk = "^3.9.1"
 
 [tool.isort]
 profile = "black"

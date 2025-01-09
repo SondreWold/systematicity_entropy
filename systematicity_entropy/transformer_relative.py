@@ -2,6 +2,8 @@
 The transformer model.
 """
 
+from __future__ import annotations
+
 import math
 
 import torch
@@ -34,11 +36,15 @@ class Transformer(nn.Module):
         self.output_embedding = nn.Embedding(
             self.output_vocabulary_size, self.hidden_size
         )
-        self.source_positional_embedding = RelativePositionalEmbeddings(hidden_size, position_bucket_size=8)
+        self.source_positional_embedding = RelativePositionalEmbeddings(
+            hidden_size, position_bucket_size=8
+        )
         self.encoder = Encoder(
             self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout
         )
-        self.target_positional_embedding = RelativePositionalEmbeddings(hidden_size, position_bucket_size=64)
+        self.target_positional_embedding = RelativePositionalEmbeddings(
+            hidden_size, position_bucket_size=64
+        )
         self.decoder = Decoder(
             self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout
         )
@@ -72,7 +78,12 @@ class Transformer(nn.Module):
         source_relative_embeddings = self.source_positional_embedding()
         target_relative_embeddings = self.target_positional_embedding()
         x = self.decoder(
-            x, x_padding_mask, target_relative_embeddings, memory, memory_padding_mask, source_relative_embeddings
+            x,
+            x_padding_mask,
+            target_relative_embeddings,
+            memory,
+            memory_padding_mask,
+            source_relative_embeddings,
         )
         x = self.projection(x)
         return x
@@ -140,7 +151,13 @@ class Decoder(nn.Module):
         self.output_norm = nn.LayerNorm(hidden_size)
 
     def forward(
-        self, x, x_padding_mask, x_relative_embeddings, memory, memory_padding_mask, memory_relative_embeddings
+        self,
+        x,
+        x_padding_mask,
+        x_relative_embeddings,
+        memory,
+        memory_padding_mask,
+        memory_relative_embeddings,
     ):
         attention_mask = self.get_attention_mask(x.size(1), x.size(1), x.device)
         for layer in self.layers:
@@ -170,7 +187,11 @@ class EncoderLayer(nn.Module):
     def __init__(self, hidden_size, num_heads, dropout):
         super().__init__()
         self.self_attention = RelativeMultiHeadAttention(
-            hidden_size, num_heads, dropout, query_position_bucket_size=8, key_position_bucket_size=8
+            hidden_size,
+            num_heads,
+            dropout,
+            query_position_bucket_size=8,
+            key_position_bucket_size=8,
         )
         self.norm_1 = nn.LayerNorm(hidden_size)
         self.feed_forward = FeedForward(hidden_size)
@@ -181,7 +202,12 @@ class EncoderLayer(nn.Module):
         x_ = self.norm_1(x)
         x = x + self.dropout(
             self.self_attention(
-                x_, x_, x_, relative_embeddings, relative_embeddings, key_padding_mask=x_padding_mask
+                x_,
+                x_,
+                x_,
+                relative_embeddings,
+                relative_embeddings,
+                key_padding_mask=x_padding_mask,
             )
         )
         x_ = self.norm_2(x)
@@ -193,11 +219,19 @@ class DecoderLayer(nn.Module):
     def __init__(self, hidden_size, num_heads, dropout):
         super().__init__()
         self.self_attention = RelativeMultiHeadAttention(
-            hidden_size, num_heads, dropout, query_position_bucket_size=64, key_position_bucket_size=64
+            hidden_size,
+            num_heads,
+            dropout,
+            query_position_bucket_size=64,
+            key_position_bucket_size=64,
         )
         self.norm_1 = nn.LayerNorm(hidden_size)
         self.cross_attention = RelativeMultiHeadAttention(
-            hidden_size, num_heads, dropout, query_position_bucket_size=64, key_position_bucket_size=8
+            hidden_size,
+            num_heads,
+            dropout,
+            query_position_bucket_size=64,
+            key_position_bucket_size=8,
         )
         self.norm_2 = nn.LayerNorm(hidden_size)
         self.feed_forward = FeedForward(hidden_size)
@@ -398,10 +432,16 @@ class RelativeMultiHeadAttention(nn.Module):
             0
         )
         position_indices = self.make_log_bucket_position(
-            position_indices, getattr(self, f"{prefix}_position_bucket_size"), max_sequence_length
+            position_indices,
+            getattr(self, f"{prefix}_position_bucket_size"),
+            max_sequence_length,
         )
-        position_indices = getattr(self, f"{prefix}_position_bucket_size") - 1 + position_indices
-        self.register_buffer(f"{prefix}_position_indices", position_indices, persistent=False)
+        position_indices = (
+            getattr(self, f"{prefix}_position_bucket_size") - 1 + position_indices
+        )
+        self.register_buffer(
+            f"{prefix}_position_indices", position_indices, persistent=False
+        )
 
     def make_log_bucket_position(self, relative_pos, bucket_size, max_position):
         sign: torch.Tensor
@@ -499,7 +539,11 @@ class RelativeMultiHeadAttention(nn.Module):
         query_len = queries.size(1)
 
         relative_query_pos, relative_key_pos = self.create_relative_embeddings(
-            query_relative_embeddings, key_relative_embeddings, query_len, key_len, hidden_size // self.num_heads
+            query_relative_embeddings,
+            key_relative_embeddings,
+            query_len,
+            key_len,
+            hidden_size // self.num_heads,
         )
 
         queries = queries.view(

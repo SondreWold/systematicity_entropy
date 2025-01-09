@@ -6,11 +6,12 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import wandb
 from dataset import CollateFunctor, ScanDataset
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils import cosine_schedule_with_warmup, set_seed
+
+import wandb
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MAX_GEN_TOKENS = 200
@@ -229,6 +230,7 @@ def main():
         "dropout": args.dropout,
         "hidden_size": args.hidden_size,
         "layers": args.layers,
+        "type": args.type,
     }
     wandb.init(project="ood_base", config=wandb_config)
 

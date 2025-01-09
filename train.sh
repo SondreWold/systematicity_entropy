@@ -1,0 +1,1 @@
+WANDB_MODE=disabled python systematicity_entropy/train.py --train_path data/uniform.txt --val_path data/test.txt --save_path test_mod_super --batch_size 32 --epochs 40 --learning_rate 3e-4 --layers 2 --hidden_size 128 --task scan --patience 999 --dropout 0.1 --seed 42 --type rel

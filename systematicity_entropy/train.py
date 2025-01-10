@@ -204,6 +204,7 @@ def train(
         if patience == 0:
             logging.info("Patience ran out... breaking training loop")
             break
+    wandb.log({"best_val_loss": prev_best_val_loss})
 
     return save_log
 

@@ -256,7 +256,7 @@ def main():
         drop_last=True,
     )
     val_loader = DataLoader(
-        validation_set, batch_size=2, collate_fn=collator, shuffle=False
+        validation_set, batch_size=16, collate_fn=collator, shuffle=False
     )
     vocab_size = len(training_set.ctoi.keys())
 
@@ -272,7 +272,7 @@ def main():
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=args.learning_rate, betas=(0.9, 0.98)
     )
-    max_steps = len(train_loader) * args.batch_size
+    max_steps = len(train_loader) * args.epochs
     scheduler = cosine_schedule_with_warmup(
         optimizer, int(max_steps * 0.06), max_steps, 0.1
     )

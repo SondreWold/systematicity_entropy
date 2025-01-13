@@ -133,4 +133,4 @@ class CollateFunctor:
 
 
 if __name__ == "__main__":
-    dataset = ScanDataset("myscan/train.txt", 128, "cpu", "scan", True)
+    dataset = ScanDataset("../data/test.txt", 128, "cpu", "scan", True)

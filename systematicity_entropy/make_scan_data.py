@@ -8,6 +8,9 @@ from systematicity_entropy.PCFG import PCFG
 ATOMS = {
     "walk": "WALK",
     "sprint": "SPRINT",
+    "crawl": "CRAWL",
+    "squat": "SQUAT",
+    "lunge": "LUNGE",
     "jump": "JUMP",
     "run": "RUN",
     "look": "LOOK",
@@ -20,7 +23,7 @@ ATOMS = {
 }
 
 UNARIES = re.compile(
-    "(.*)(walk|look|run|jump|sprint) (?:(opposite|around) )?(left|right)(.*)"
+    "(.*)(walk|look|run|jump|sprint|crawl|squat|lunge) (?:(opposite|around) )?(left|right)(.*)"
 )
 
 

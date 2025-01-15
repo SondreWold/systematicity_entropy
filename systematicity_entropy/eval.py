@@ -26,6 +26,13 @@ def parse_args() -> argparse.Namespace:
         "--block_size", type=int, default=32, help="The block size of the transformer"
     )
     parser.add_argument("--val_path", type=Path, help="Val data path")
+    parser.add_argument(
+        "--entropy_level", type=str, default="not_set", help="Entropy level"
+    )
+    parser.add_argument("--size", type=str, default="not_set", help="Val data path")
+    parser.add_argument(
+        "--wandb", type=str, default="ood_generic", help="Wandb project name"
+    )
     parser.add_argument("--model_path", type=Path, help="Checkpoint to load")
     parser.add_argument(
         "--layers", type=int, default=6, help="Number of Transformer decoder layers"
@@ -131,8 +138,11 @@ def main():
         "val_data": str(args.val_path),
         "model_path": str(args.model_path),
         "seed": args.seed,
+        "entropy_level": args.entropy_level,
+        "size": args.size,
     }
-    wandb.init(project="ood_generic", config=config)
+    wandb_name = f"{str(args.model_path)}"
+    wandb.init(name=wandb_name, project=args.wandb, config=config)
 
     logging.info("Calculating final accuracy")
     final_acc = test_scan_gen(model, val)

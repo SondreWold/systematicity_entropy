@@ -29,6 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train_path", type=Path, help="Train data path")
     parser.add_argument("--val_path", type=Path, help="Val data path")
     parser.add_argument("--save_path", type=Path, help="Where to save the model")
+    parser.add_argument("--wandb", type=str, help="Wandb project name")
     parser.add_argument(
         "--learning_rate",
         type=float,
@@ -233,7 +234,7 @@ def main():
         "layers": args.layers,
         "type": args.type,
     }
-    wandb.init(project="ood_base", config=wandb_config)
+    wandb.init(project=args.wandb, config=wandb_config)
 
     if args.type == "van":
         from transformer import Transformer

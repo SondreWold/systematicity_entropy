@@ -78,7 +78,7 @@ def test_scan_gen(model: nn.Module, val_data: Dataset) -> float:
     Returns:
         float: the test accuracy
     """
-    max_new_tokens = 256
+    max_new_tokens = 64
     correct = 0
     errors = 0
     collator = CollateFunctor(val_data.pad_idx)

@@ -1,26 +1,3 @@
-"""
-MIT License
-
-Copyright (c) Facebook, Inc. and its affiliates.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
-"""
 import argparse
 import json
 import logging
@@ -31,8 +8,8 @@ import torch.nn as nn
 from dataset import ScanDataset
 from tqdm import tqdm
 from utils import cosine_schedule_with_warmup, set_seed
-from systematicity_entropy.models.rnn import BasicSeq2Seq
 
+from systematicity_entropy.models.rnn import BasicSeq2Seq
 from wandb import wandb  # type: ignore
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -41,85 +18,91 @@ CURR_FILE_PATH = Path(__file__).resolve()
 CURR_FILE_DIR = CURR_FILE_PATH.parent
 MODEL_FOLDER = CURR_FILE_DIR / "trained_models"
 DATASET_MAP = {
-        "scan": ScanDataset,
-        }
+    "scan": ScanDataset,
+}
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-            description="Training script for systematicity experiments"
-            )
+        description="Training script for systematicity experiments"
+    )
     parser.add_argument("--train_path", type=Path, help="Train data path")
     parser.add_argument("--val_path", type=Path, help="Val data path")
     parser.add_argument("--save_path", type=Path, help="Where to save the model")
     parser.add_argument(
-            "--wandb", type=str, default="ood_debug", help="Wandb project name"
-            )
+        "--wandb", type=str, default="ood_debug", help="Wandb project name"
+    )
     parser.add_argument(
-            "--learning_rate",
-            type=float,
-            default=1e-4,
-            help="Learning rate for the optimizer.",
-            )
+        "--learning_rate",
+        type=float,
+        default=1e-4,
+        help="Learning rate for the optimizer.",
+    )
     parser.add_argument(
-            "--seed", type=int, default=42, help="Random seed for reproducibility."
-            )
+        "--seed", type=int, default=42, help="Random seed for reproducibility."
+    )
     parser.add_argument("--weight_decay", type=float, default=1e-1, help="Weight decay")
     parser.add_argument("--dropout", type=float, default=0.2, help="Dropout value")
     parser.add_argument("--grad_clip", type=float, default=5.0, help="Grad clip value")
     parser.add_argument(
-            "--acc",
-            action="store_true",
-            help="When activated, calculate accuracy per eval epoch",
-            )
+        "--acc",
+        action="store_true",
+        help="When activated, calculate accuracy per eval epoch",
+    )
     parser.add_argument(
-            "--epochs", type=int, default=10, help="Number of training epochs"
-            )
+        "--epochs", type=int, default=10, help="Number of training epochs"
+    )
     parser.add_argument(
-            "--batch_size", type=int, default=512, help="Default training batch size"
-            )
+        "--batch_size", type=int, default=512, help="Default training batch size"
+    )
     parser.add_argument(
-            "--layers", type=int, default=6, help="Number of Transformer decoder layers"
-            )
+        "--layers", type=int, default=6, help="Number of Transformer decoder layers"
+    )
     parser.add_argument(
-            "--hidden_size",
-            type=int,
-            default=384,
-            help="The hidden size of the model layers",
-            )
+        "--hidden_size",
+        type=int,
+        default=384,
+        help="The hidden size of the model layers",
+    )
     parser.add_argument(
-            "--patience",
-            type=int,
-            default=3,
-            help="How many epochs to allow val loss increase",
-            )
+        "--patience",
+        type=int,
+        default=3,
+        help="How many epochs to allow val loss increase",
+    )
     parser.add_argument(
-            "--task",
-            type=str,
-            default="scan",
-            choices=["scan"],
-            help="Which task to train the model on",
-            )
+        "--task",
+        type=str,
+        default="scan",
+        choices=["scan"],
+        help="Which task to train the model on",
+    )
+    parser.add_argument(
+        "--type",
+        type=str,
+        default="GRU",
+        choices=["GRU", "LSTM", "RNN", "GRNN", "GGRU", "GLSTM"],
+        help="Which RNN type to use",
+    )
     return parser.parse_args()
 
 
-
 def train(
-        model: torch.nn.Module,
-        train_dataset: ScanDataset,
-        val_dataset: ScanDataset,
-        optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler.LRScheduler,
-        args: argparse.Namespace,
-        ):
+    model: torch.nn.Module,
+    train_dataset: ScanDataset,
+    val_dataset: ScanDataset,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler,
+    args: argparse.Namespace,
+):
     prev_best_val_loss = 999.999
     patience = args.patience
     criterion = nn.NLLLoss().to(DEVICE)
     save_log: dict[str, list] = {
-            "train_loss": [],
-            "val_loss": [],
-            "val_acc": [],
-            }
+        "train_loss": [],
+        "val_loss": [],
+        "val_acc": [],
+    }
     for epoch in range(args.epochs):
         logging.info(f"Starting training for epoch: {epoch}")
         model.encoder.train()
@@ -201,61 +184,63 @@ def train(
         wandb.log({"best_val_loss": prev_best_val_loss})
 
 
-
-        
 def main():
     logging.basicConfig(
-            format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-            datefmt="%m/%d/%Y %H:%M:%S",
-            level=logging.INFO,
-            )
+        format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",
+        level=logging.INFO,
+    )
     args = parse_args()
     set_seed(args.seed)
     wandb_config = {
-            "lr": args.learning_rate,
-            "val_data": str(args.val_path),
-            "train_data": str(args.train_path),
-            "save_path": str(args.save_path),
-            "epochs": args.epochs,
-            "seed": args.seed,
-            "batch_size": args.batch_size,
-            "grad_clip": args.grad_clip,
-            "weight_decay": args.weight_decay,
-            "dropout": args.dropout,
-            "hidden_size": args.hidden_size,
-            "layers": args.layers,
-            }
+        "lr": args.learning_rate,
+        "val_data": str(args.val_path),
+        "train_data": str(args.train_path),
+        "save_path": str(args.save_path),
+        "epochs": args.epochs,
+        "seed": args.seed,
+        "batch_size": args.batch_size,
+        "grad_clip": args.grad_clip,
+        "weight_decay": args.weight_decay,
+        "dropout": args.dropout,
+        "hidden_size": args.hidden_size,
+        "layers": args.layers,
+        "rnn_type": args.type,
+    }
     wandb.init(project=args.wandb, config=wandb_config)
 
     training_set = DATASET_MAP[args.task](
-            args.train_path, device=DEVICE, task=args.task
-            )
+        args.train_path, device=DEVICE, task=args.task
+    )
     validation_set = DATASET_MAP[args.task](
-            args.val_path, device=DEVICE, task=args.task
-            )
+        args.val_path, device=DEVICE, task=args.task
+    )
     vocab_size = len(training_set.ctoi.keys())
-    model = BasicSeq2Seq(vocab_size=vocab_size,
-                         encoder_hidden_size=args.hidden_size,
-                         decoder_hidden_size=args.hidden_size,
-                         layer_type="LSTM",
-                         use_attention=True,
-                         drop_rate=args.dropout,
-                         bidirectional=True,
-                         num_layers=args.layers,
-                         bos_token_idx=training_set.bos_idx,
-                         eos_token_idx=training_set.eos_idx,)
+    model = BasicSeq2Seq(
+        vocab_size=vocab_size,
+        encoder_hidden_size=args.hidden_size,
+        decoder_hidden_size=args.hidden_size,
+        layer_type=args.type,
+        use_attention=True,
+        drop_rate=args.dropout,
+        bidirectional=True,
+        num_layers=args.layers,
+        bos_token_idx=training_set.bos_idx,
+        eos_token_idx=training_set.eos_idx,
+    )
     model.to(DEVICE)
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logging.info(f"Number of parameters: {params}")
 
-
     optimizer = torch.optim.AdamW(
-            list(model.encoder.parameters()) + list(model.decoder.parameters()), lr=args.learning_rate, betas=(0.9, 0.98)
-            )
+        list(model.encoder.parameters()) + list(model.decoder.parameters()),
+        lr=args.learning_rate,
+        betas=(0.9, 0.98),
+    )
     max_steps = len(training_set) * args.epochs
     scheduler = cosine_schedule_with_warmup(
-            optimizer, int(max_steps * 0.06), max_steps, 0.1
-            )
+        optimizer, int(max_steps * 0.06), max_steps, 0.1
+    )
 
     train(model, training_set, validation_set, optimizer, scheduler, args)
 

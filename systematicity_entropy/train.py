@@ -237,11 +237,11 @@ def main():
     wandb.init(project=args.wandb, config=wandb_config)
 
     if args.type == "van":
-        from transformer import Transformer
+        from systematicity_entropy.models.transformer import Transformer
     elif args.type == "rope":
-        from transformer_rope import Transformer
+        from systematicity_entropy.models.transformer_rope import Transformer
     elif args.type == "rel":
-        from transformer_relative import Transformer
+        from systematicity_entropy.models.transformer_relative import Transformer
 
     training_set = DATASET_MAP[args.task](
         args.train_path, args.block_size, device=DEVICE, task=args.task

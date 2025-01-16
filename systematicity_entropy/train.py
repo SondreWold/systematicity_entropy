@@ -14,7 +14,7 @@ from utils import cosine_schedule_with_warmup, set_seed
 import wandb
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MAX_GEN_TOKENS = 200
+MAX_GEN_TOKENS = 64
 CURR_FILE_PATH = Path(__file__).resolve()
 CURR_FILE_DIR = CURR_FILE_PATH.parent
 MODEL_FOLDER = CURR_FILE_DIR / "trained_models"

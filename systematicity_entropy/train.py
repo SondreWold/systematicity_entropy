@@ -11,10 +11,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils import cosine_schedule_with_warmup, set_seed
 
-import wandb
+from wandb import wandb  # type: ignore
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-MAX_GEN_TOKENS = 200
+MAX_GEN_TOKENS = 64
 CURR_FILE_PATH = Path(__file__).resolve()
 CURR_FILE_DIR = CURR_FILE_PATH.parent
 MODEL_FOLDER = CURR_FILE_DIR / "trained_models"
@@ -24,11 +24,15 @@ DATASET_MAP = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Training script for systematicity experiments")
+    parser = argparse.ArgumentParser(
+        description="Training script for systematicity experiments"
+    )
     parser.add_argument("--train_path", type=Path, help="Train data path")
     parser.add_argument("--val_path", type=Path, help="Val data path")
     parser.add_argument("--save_path", type=Path, help="Where to save the model")
-    parser.add_argument("--wandb", type=str, default="ood_debug", help="Wandb project name")
+    parser.add_argument(
+        "--wandb", type=str, default="ood_debug", help="Wandb project name"
+    )
     parser.add_argument(
         "--learning_rate",
         type=float,
@@ -84,15 +88,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def get_loss_from_transformer(
-    batch: tuple, model: nn.Module
-) -> tuple[torch.Tensor, torch.Tensor]:
+def get_loss_from_transformer(batch: tuple, model: nn.Module) -> torch.Tensor:
     source_ids, source_mask, target_ids, target_mask = batch
     logits = model(source_ids, source_mask, target_ids[:, :-1], target_mask[:, :-1])
     loss = F.cross_entropy(
         logits.transpose(-2, -1), target_ids[:, 1:], ignore_index=model.pad_token
     )
-    return logits, loss
+    return loss
 
 
 def get_accuracy_from_transformer(
@@ -144,7 +146,7 @@ def train(
         model.train()
         for batch in train_loader:
             optimizer.zero_grad(set_to_none=True)
-            logits, loss = get_loss_from_transformer(batch, model)
+            loss = get_loss_from_transformer(batch, model)
             loss.backward()
             if args.grad_clip != 0.0:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
@@ -159,10 +161,10 @@ def train(
         model.eval()
         with torch.no_grad():
             for batch in tqdm(val_loader):
-                logits, loss = get_loss_from_transformer(batch, model)
+                loss = get_loss_from_transformer(batch, model)
                 val_loss += loss.item()
                 if args.acc:
-                    correct = get_accuracy_from_transformer(
+                    correct += get_accuracy_from_transformer(
                         batch, val_loader.dataset.idx_map, model
                     )
 
@@ -203,9 +205,8 @@ def train(
         if patience == 0:
             logging.info("Patience ran out... breaking training loop")
             break
-    wandb.log({"best_val_loss": prev_best_val_loss})
 
-    return save_log
+        wandb.log({"best_val_loss": prev_best_val_loss})
 
 
 def main():
@@ -276,8 +277,7 @@ def main():
         optimizer, int(max_steps * 0.06), max_steps, 0.1
     )
 
-    save_log = train(model, train_loader, val_loader, optimizer, scheduler, args)
-    assert save_log
+    train(model, train_loader, val_loader, optimizer, scheduler, args)
 
 
 if __name__ == "__main__":

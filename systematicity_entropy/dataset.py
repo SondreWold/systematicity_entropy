@@ -28,9 +28,7 @@ class ScanDataset(Dataset):
         self.eos_token = EOS_TOKEN
         self.pad_token = PAD_TOKEN
         self.translation_token = TRANSLATION_TOKEN
-        tokenizer_path = (
-            SCAN_TOKENIZER_PATH if self.task == "scan" else PCFG_TOKENIZER_PATH
-        )
+        tokenizer_path = SCAN_TOKENIZER_PATH
         if recreate_tokenizer:
             self.ctoi, self.itoc = self.create_tokenizer(tokenizer_path)
         else:
@@ -111,7 +109,9 @@ class CollateFunctor:
     def __init__(self, pad_idx: int) -> None:
         self.pad_id = pad_idx
 
-    def __call__(self, sentences: list):
+    def __call__(
+        self, sentences: list
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         source_ids, target_ids = zip(*sentences)
         source_ids, source_mask = self.collate_sentences(source_ids)
         target_ids, target_mask = self.collate_sentences(target_ids)
@@ -132,5 +132,5 @@ class CollateFunctor:
 
 if __name__ == "__main__":
     dataset = ScanDataset(
-        "../data/eight_verbs/datasets/high_uniform.txt", 128, "cpu", "scan", True
+        "../data/eight_verbs/datasets/high_uniform.txt", "cpu", "scan", True
     )

@@ -22,9 +22,6 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Train and evaluate a machine learning model."
     )
-    parser.add_argument(
-        "--block_size", type=int, default=32, help="The block size of the transformer"
-    )
     parser.add_argument("--val_path", type=Path, help="Val data path")
     parser.add_argument(
         "--entropy_level", type=str, default="not_set", help="Entropy level"
@@ -116,15 +113,13 @@ def main():
     args = parse_args()
     set_seed(args.seed)
     if args.type == "van":
-        from transformer import Transformer
+        from systematicity_entropy.models.transformer import Transformer
     elif args.type == "rope":
-        from transformer_rope import Transformer
+        from systematicity_entropy.models.transformer_rope import Transformer
     elif args.type == "rel":
-        from transformer_relative import Transformer
+        from systematicity_entropy.models.transformer_relative import Transformer
 
-    val = DATASET_MAP[args.task](
-        args.val_path, args.block_size, device=DEVICE, task=args.task
-    )
+    val = DATASET_MAP[args.task](args.val_path, device=DEVICE, task=args.task)
     vocab_size = len(val.ctoi.keys())
     checkpoint = torch.load(args.model_path, map_location=torch.device("cpu"))
 

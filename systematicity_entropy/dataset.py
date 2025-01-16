@@ -18,7 +18,6 @@ class ScanDataset(Dataset):
     def __init__(
         self,
         path: str,
-        block_size: int,
         device: str = "cpu",
         task: str = "scan",
         recreate_tokenizer: bool = False,

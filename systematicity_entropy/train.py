@@ -24,13 +24,11 @@ DATASET_MAP = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train base model")
+    parser = argparse.ArgumentParser(description="Training script for systematicity experiments")
     parser.add_argument("--train_path", type=Path, help="Train data path")
     parser.add_argument("--val_path", type=Path, help="Val data path")
     parser.add_argument("--save_path", type=Path, help="Where to save the model")
-    parser.add_argument(
-        "--wandb", type=str, default="ood_debug", help="Wandb project name"
-    )
+    parser.add_argument("--wandb", type=str, default="ood_debug", help="Wandb project name")
     parser.add_argument(
         "--learning_rate",
         type=float,
@@ -46,7 +44,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--acc",
         action="store_true",
-        help="When actiated, calculate accuracy per eval epoch",
+        help="When activated, calculate accuracy per eval epoch",
     )
     parser.add_argument(
         "--epochs", type=int, default=10, help="Number of training epochs"
@@ -54,7 +52,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--batch_size", type=int, default=512, help="Default training batch size"
     )
-    parser.add_argument("--block_size", type=int, default=32, help="Default block size")
     parser.add_argument(
         "--layers", type=int, default=6, help="Number of Transformer decoder layers"
     )
@@ -226,7 +223,6 @@ def main():
         "save_path": str(args.save_path),
         "epochs": args.epochs,
         "seed": args.seed,
-        "block_size": args.block_size,
         "batch_size": args.batch_size,
         "grad_clip": args.grad_clip,
         "weight_decay": args.weight_decay,
@@ -245,10 +241,10 @@ def main():
         from systematicity_entropy.models.transformer_relative import Transformer
 
     training_set = DATASET_MAP[args.task](
-        args.train_path, args.block_size, device=DEVICE, task=args.task
+        args.train_path, device=DEVICE, task=args.task
     )
     validation_set = DATASET_MAP[args.task](
-        args.val_path, args.block_size, device=DEVICE, task=args.task
+        args.val_path, device=DEVICE, task=args.task
     )
     collator = CollateFunctor(training_set.pad_idx)
     train_loader = DataLoader(

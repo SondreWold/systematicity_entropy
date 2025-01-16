@@ -20,7 +20,6 @@ CURR_FILE_DIR = CURR_FILE_PATH.parent
 MODEL_FOLDER = CURR_FILE_DIR / "trained_models"
 DATASET_MAP = {
     "scan": ScanDataset,
-    "pcfg": ScanDataset,
 }
 
 
@@ -29,7 +28,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--train_path", type=Path, help="Train data path")
     parser.add_argument("--val_path", type=Path, help="Val data path")
     parser.add_argument("--save_path", type=Path, help="Where to save the model")
-    parser.add_argument("--wandb", type=str, help="Wandb project name")
+    parser.add_argument(
+        "--wandb", type=str, default="ood_debug", help="Wandb project name"
+    )
     parser.add_argument(
         "--learning_rate",
         type=float,
@@ -72,8 +73,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--task",
         type=str,
-        default="number",
-        choices=["scan", "pcfg"],
+        default="scan",
+        choices=["scan"],
         help="Which task to train the model on",
     )
     parser.add_argument(

@@ -12,7 +12,6 @@ TRANSLATION_TOKEN = "[TRANS]"
 CURR_FILE_PATH = Path(__file__).resolve()
 CURR_FILE_DIR = CURR_FILE_PATH.parent
 SCAN_TOKENIZER_PATH = CURR_FILE_DIR / "../static/scan_tokenizer.json"
-PCFG_TOKENIZER_PATH = CURR_FILE_DIR / "../static/PCFG_tokenizer.json"
 
 
 class ScanDataset(Dataset):
@@ -133,4 +132,6 @@ class CollateFunctor:
 
 
 if __name__ == "__main__":
-    dataset = ScanDataset("../data/test.txt", 128, "cpu", "scan", True)
+    dataset = ScanDataset(
+        "../data/eight_verbs/datasets/high_uniform.txt", 128, "cpu", "scan", True
+    )

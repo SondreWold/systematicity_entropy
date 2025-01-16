@@ -109,7 +109,9 @@ class CollateFunctor:
     def __init__(self, pad_idx: int) -> None:
         self.pad_id = pad_idx
 
-    def __call__(self, sentences: list):
+    def __call__(
+        self, sentences: list
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         source_ids, target_ids = zip(*sentences)
         source_ids, source_mask = self.collate_sentences(source_ids)
         target_ids, target_mask = self.collate_sentences(target_ids)

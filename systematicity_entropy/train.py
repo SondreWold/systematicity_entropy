@@ -269,6 +269,9 @@ def main():
         training_set.pad_idx,
     ).to(DEVICE)
 
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logging.info(f"Number of parameters: {params}")
+
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=args.learning_rate, betas=(0.9, 0.98)
     )

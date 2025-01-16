@@ -5,7 +5,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from dataset import CollateFunctor, ScanDataset
+from dataset import ScanDataset
 from tqdm import tqdm
 from utils import cosine_schedule_with_warmup, set_seed
 from systematicity_entropy.models.rnn import BasicSeq2Seq
@@ -126,7 +126,7 @@ def train(
             optimizer.step()
             scheduler.step()
             loss = loss / target_length
-            train_loss += loss
+            train_loss += loss.item()
 
         pbar.close()
         model.encoder.eval()
@@ -149,7 +149,7 @@ def train(
                 if decoder_output_symbol.item() == val_dataset.eos_idx:
                     break
             loss = loss / target_length
-            val_loss += loss
+            val_loss += loss.item()
         pbar.close()
 
         epoch_train_loss = train_loss / len(train_dataset)
@@ -214,7 +214,7 @@ def main():
     model = BasicSeq2Seq(vocab_size=vocab_size,
                          encoder_hidden_size=args.hidden_size,
                          decoder_hidden_size=args.hidden_size,
-                         layer_type="GRU",
+                         layer_type="LSTM",
                          use_attention=True,
                          drop_rate=args.dropout,
                          bidirectional=True,
@@ -222,6 +222,8 @@ def main():
                          bos_token_idx=training_set.bos_idx,
                          eos_token_idx=training_set.eos_idx,)
     model.to(DEVICE)
+    params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logging.info(f"Number of parameters: {params}")
 
 
     optimizer = torch.optim.AdamW(

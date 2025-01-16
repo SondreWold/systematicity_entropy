@@ -1,12 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-import torch
 import abc
+
 import six
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MAX_LENGTH = 64
+
 
 class AbsSeq2Seq(six.with_metaclass(abc.ABCMeta, nn.Module)):
     """Abstract Seq2Seq base model
@@ -21,25 +23,30 @@ class AbsSeq2Seq(six.with_metaclass(abc.ABCMeta, nn.Module)):
         bidirectional (bool): Encoder uses bidirectional mechanisms
         num_layers (int): number of hidden layers in recurrent modules
     """
-    def __init__(self,
-                 vocab_size,
-                 encoder_hidden_size,
-                 decoder_hidden_size,
-                 layer_type,
-                 use_attention,
-                 drop_rate,
-                 bidirectional,
-                 num_layers,
-                 bos_idx,
-                 eos_idx):
+
+    def __init__(
+        self,
+        vocab_size,
+        encoder_hidden_size,
+        decoder_hidden_size,
+        layer_type,
+        use_attention,
+        drop_rate,
+        bidirectional,
+        num_layers,
+        bos_idx,
+        eos_idx,
+    ):
         super(AbsSeq2Seq, self).__init__()
 
         self.max_length = MAX_LENGTH
         self.input_size = vocab_size
         self.encoder_hidden_size = encoder_hidden_size
         self.decoder_hidden_size = decoder_hidden_size
-        if layer_type not in ['GRU', 'LSTM', 'RNN', 'GRNN', 'GGRU', 'GLSTM']:
-            raise NotImplementedError("Supported cells: '(G)RNN', '(G)GRU', or '(G)LSTM'")
+        if layer_type not in ["GRU", "LSTM", "RNN", "GRNN", "GGRU", "GLSTM"]:
+            raise NotImplementedError(
+                "Supported cells: '(G)RNN', '(G)GRU', or '(G)LSTM'"
+            )
         self.layer_type = layer_type
         self.output_size = self.input_size
         self.use_attention = use_attention
@@ -51,11 +58,13 @@ class AbsSeq2Seq(six.with_metaclass(abc.ABCMeta, nn.Module)):
         self.eos_idx = eos_idx
 
     @abc.abstractmethod
-    def forward(self,
-                input_tensor,
-                syntax_tensor=None,
-                target_tensor=None,
-                use_teacher_forcing=False):
+    def forward(
+        self,
+        input_tensor,
+        syntax_tensor=None,
+        target_tensor=None,
+        use_teacher_forcing=False,
+    ):
         """Forward pass for model. Conditions on sentence in input language and generates a sentence in output language
 
         Args:
@@ -70,7 +79,9 @@ class AbsSeq2Seq(six.with_metaclass(abc.ABCMeta, nn.Module)):
     def init_forward_pass(self):
         """Helper function initialize required objects on forward pass"""
         encoder_hidden = self.encoder.init_hidden()
-        decoder_outputs = torch.zeros(MAX_LENGTH, self.decoder.output_size, device=device)
+        decoder_outputs = torch.zeros(
+            MAX_LENGTH, self.decoder.output_size, device=device
+        )
         decoder_input = torch.tensor([[self.bos_idx]], device=device)
         return encoder_hidden, decoder_input, decoder_outputs
 
@@ -93,9 +104,9 @@ class AbsSeq2Seq(six.with_metaclass(abc.ABCMeta, nn.Module)):
         Returns:
             (torch.tensor) initial hidden state to be passed to decoder
         """
-        if 'GRU' in self.layer_type or 'RNN' in self.layer_type:
+        if "GRU" in self.layer_type or "RNN" in self.layer_type:
             return self._arrange_hidden(hidden)
-        elif 'LSTM' in self.layer_type:
+        elif "LSTM" in self.layer_type:
             return tuple([self._arrange_hidden(h) for h in hidden])
         else:
             raise NotImplementedError
@@ -104,8 +115,10 @@ class AbsSeq2Seq(six.with_metaclass(abc.ABCMeta, nn.Module)):
         """Helper function to determine length of input sequence"""
         if target_tensor is not None:
             target_length = target_tensor.size(0)
-            assert target_length <= MAX_LENGTH, print("Max length exceeded. Max Length: %s, Target length: %s"
-                                                      % (MAX_LENGTH, target_length))
+            assert target_length <= MAX_LENGTH, print(
+                "Max length exceeded. Max Length: %s, Target length: %s"
+                % (MAX_LENGTH, target_length)
+            )
             return target_length
         else:
             return None
@@ -132,48 +145,61 @@ class BasicSeq2Seq(AbsSeq2Seq):
         bidirectional (bool): Encoder uses bidirectional mechanisms
         num_layers (int): number of hidden layers in recurrent modules
     """
-    def __init__(self,
-                 vocab_size,
-                 encoder_hidden_size,
-                 decoder_hidden_size,
-                 layer_type,
-                 use_attention,
-                 drop_rate,
-                 bidirectional,
-                 num_layers,
-                 bos_token_idx,
-                 eos_token_idx):
-        super(BasicSeq2Seq, self).__init__(vocab_size=vocab_size,
-                                           encoder_hidden_size=encoder_hidden_size,
-                                           decoder_hidden_size=decoder_hidden_size,
-                                           layer_type=layer_type,
-                                           use_attention=use_attention,
-                                           drop_rate=drop_rate,
-                                           bidirectional=bidirectional,
-                                           num_layers=num_layers,
-                                           bos_idx=bos_token_idx,
-                                           eos_idx=eos_token_idx)
 
-        self.encoder = EncoderRNN(input_size=self.input_size,
-                                  hidden_size=self.encoder_hidden_size,
-                                  layer_type=self.layer_type,
-                                  bidirectional=self.bidirectional,
-                                  num_layers=self.num_layers)
+    def __init__(
+        self,
+        vocab_size,
+        encoder_hidden_size,
+        decoder_hidden_size,
+        layer_type,
+        use_attention,
+        drop_rate,
+        bidirectional,
+        num_layers,
+        bos_token_idx,
+        eos_token_idx,
+    ):
+        super(BasicSeq2Seq, self).__init__(
+            vocab_size=vocab_size,
+            encoder_hidden_size=encoder_hidden_size,
+            decoder_hidden_size=decoder_hidden_size,
+            layer_type=layer_type,
+            use_attention=use_attention,
+            drop_rate=drop_rate,
+            bidirectional=bidirectional,
+            num_layers=num_layers,
+            bos_idx=bos_token_idx,
+            eos_idx=eos_token_idx,
+        )
+
+        self.encoder = EncoderRNN(
+            input_size=self.input_size,
+            hidden_size=self.encoder_hidden_size,
+            layer_type=self.layer_type,
+            bidirectional=self.bidirectional,
+            num_layers=self.num_layers,
+        )
         if self.use_attention:
-            self.decoder = AttnDecoderRNN(hidden_size=self.decoder_hidden_size * self.num_directions,
-                                          output_size=self.output_size,
-                                          layer_type=self.layer_type,
-                                          dropout_p=self.drop_rate)
+            self.decoder = AttnDecoderRNN(
+                hidden_size=self.decoder_hidden_size * self.num_directions,
+                output_size=self.output_size,
+                layer_type=self.layer_type,
+                dropout_p=self.drop_rate,
+            )
         else:
-            self.decoder = DecoderRNN(hidden_size=self.decoder_hidden_size,
-                                      output_size=self.output_size,
-                                      layer_type=self.layer_type)
+            self.decoder = DecoderRNN(
+                hidden_size=self.decoder_hidden_size,
+                output_size=self.output_size,
+                layer_type=self.layer_type,
+            )
 
-    def forward(self,
-                input_tensor,
-                syntax_tensor=None,
-                target_tensor=None,
-                use_teacher_forcing=False):
+    def forward(
+        self,
+        input_tensor,
+        syntax_tensor=None,
+        target_tensor=None,
+        use_teacher_forcing=False,
+    ):
         """Forward pass for model. Conditions on sentence in input language and generates a sentence in output language
 
         Args:
@@ -195,11 +221,13 @@ class BasicSeq2Seq(AbsSeq2Seq):
             target_length = self.check_target_length(target_tensor)
             for di in range(target_length):
                 if self.use_attention:
-                    decoder_output, decoder_hidden, decoder_attention = self.decoder(decoder_input,
-                                                                                     decoder_hidden,
-                                                                                     encoder_output)
+                    decoder_output, decoder_hidden, decoder_attention = self.decoder(
+                        decoder_input, decoder_hidden, encoder_output
+                    )
                 else:
-                    decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+                    decoder_output, decoder_hidden = self.decoder(
+                        decoder_input, decoder_hidden
+                    )
 
                 decoder_outputs[di] = decoder_output
                 decoder_input = target_tensor[di]  # Teacher forcing
@@ -208,11 +236,13 @@ class BasicSeq2Seq(AbsSeq2Seq):
             # Without teacher forcing: use its own predictions as the next input
             for di in range(self.max_length):
                 if self.use_attention:
-                    decoder_output, decoder_hidden, decoder_attention = self.decoder(decoder_input,
-                                                                                     decoder_hidden,
-                                                                                     encoder_output)
+                    decoder_output, decoder_hidden, decoder_attention = self.decoder(
+                        decoder_input, decoder_hidden, encoder_output
+                    )
                 else:
-                    decoder_output, decoder_hidden = self.decoder(decoder_input, decoder_hidden)
+                    decoder_output, decoder_hidden = self.decoder(
+                        decoder_input, decoder_hidden
+                    )
                 topv, topi = decoder_output.topk(1)
                 decoder_outputs[di] = decoder_output
                 decoder_input = topi.squeeze().detach()  # detach from history as input
@@ -223,16 +253,17 @@ class BasicSeq2Seq(AbsSeq2Seq):
         return decoder_outputs
 
 
-
-
-
 def get_cell_type(cell_type):
-    assert cell_type in ['RNN', 'GRU', 'LSTM'], "Please specify layer type as 'GRU' or 'LSTM'"
-    if cell_type == 'RNN':
+    assert cell_type in [
+        "RNN",
+        "GRU",
+        "LSTM",
+    ], "Please specify layer type as 'GRU' or 'LSTM'"
+    if cell_type == "RNN":
         rnn_model = nn.RNN
-    elif cell_type == 'GRU':
+    elif cell_type == "GRU":
         rnn_model = nn.GRU
-    elif cell_type == 'LSTM':
+    elif cell_type == "LSTM":
         rnn_model = nn.LSTM
     return rnn_model
 
@@ -248,13 +279,16 @@ class EncoderRNN(nn.Module):
         bidirectional (bool, optional) Indicate whether to use a bi-directional encoder (slower). Default: False
         num_layers: (int, optional) Number of layers to place in encoder model. Default: 1
     """
-    def __init__(self,
-                 input_size,
-                 hidden_size,
-                 layer_type='GRU',
-                 semantic_n_hidden=120,
-                 bidirectional=False,
-                 num_layers=1):
+
+    def __init__(
+        self,
+        input_size,
+        hidden_size,
+        layer_type="GRU",
+        semantic_n_hidden=120,
+        bidirectional=False,
+        num_layers=1,
+    ):
         super(EncoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.semantic_n_hidden = semantic_n_hidden
@@ -263,11 +297,14 @@ class EncoderRNN(nn.Module):
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.semantic_embedding = nn.Embedding(input_size, self.semantic_n_hidden)
         self.rnn_model = get_cell_type(layer_type)
-        self.rnn = self.rnn_model(hidden_size, hidden_size, bidirectional=bidirectional, num_layers=self.num_layers)
+        self.rnn = self.rnn_model(
+            hidden_size,
+            hidden_size,
+            bidirectional=bidirectional,
+            num_layers=self.num_layers,
+        )
 
-    def forward(self,
-                input,
-                hidden):
+    def forward(self, input, hidden):
         """Forward pass through RNN-based encoder
 
         Args:
@@ -285,10 +322,27 @@ class EncoderRNN(nn.Module):
     def init_hidden(self):
         """Initialize the weights of the recurrent model"""
         if isinstance(self.rnn, nn.GRU) or isinstance(self.rnn, nn.RNN):
-            return torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device)
+            return torch.zeros(
+                self.num_directions * self.num_layers,
+                1,
+                self.hidden_size,
+                device=device,
+            )
         elif isinstance(self.rnn, nn.LSTM):
-            return (torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device),
-                    torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device))
+            return (
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+            )
 
 
 class InvariantRNN(nn.Module):
@@ -303,14 +357,17 @@ class InvariantRNN(nn.Module):
         bidirectional (bool, optional): Indicate whether to use a bi-directional encoder (slower). Default: False
         num_layers (int, optional): Number of layers to place in encoder model. Default: 1
     """
-    def __init__(self,
-                 syntax_vocab_size,
-                 semantic_vocab_size,
-                 hidden_size,
-                 layer_type='GRU',
-                 semantic_n_hidden=120,
-                 bidirectional=False,
-                 num_layers=1):
+
+    def __init__(
+        self,
+        syntax_vocab_size,
+        semantic_vocab_size,
+        hidden_size,
+        layer_type="GRU",
+        semantic_n_hidden=120,
+        bidirectional=False,
+        num_layers=1,
+    ):
         super(InvariantRNN, self).__init__()
         self.semantic_vocab_size = semantic_vocab_size
         self.syntax_size = syntax_vocab_size
@@ -319,15 +376,19 @@ class InvariantRNN(nn.Module):
         self.num_directions = 2 if bidirectional else 1
         self.num_layers = num_layers
         self.embedding = nn.Embedding(self.syntax_size, hidden_size)
-        self.semantic_embedding = nn.Embedding(self.semantic_vocab_size, self.semantic_n_hidden)
+        self.semantic_embedding = nn.Embedding(
+            self.semantic_vocab_size, self.semantic_n_hidden
+        )
 
         self.rnn_model = get_cell_type(layer_type)
-        self.rnn = self.rnn_model(hidden_size, hidden_size, bidirectional=bidirectional, num_layers=self.num_layers)
+        self.rnn = self.rnn_model(
+            hidden_size,
+            hidden_size,
+            bidirectional=bidirectional,
+            num_layers=self.num_layers,
+        )
 
-    def forward(self,
-                input,
-                syntax_input,
-                hidden):
+    def forward(self, input, syntax_input, hidden):
         """Forward pass through RNN-based encoder
 
         Args:
@@ -346,10 +407,27 @@ class InvariantRNN(nn.Module):
     def init_hidden(self):
         """Initialize the weights of the recurrent model"""
         if isinstance(self.rnn, nn.GRU):
-            return torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device)
+            return torch.zeros(
+                self.num_directions * self.num_layers,
+                1,
+                self.hidden_size,
+                device=device,
+            )
         elif isinstance(self.rnn, nn.LSTM):
-            return (torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device),
-                    torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device))
+            return (
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+            )
 
 
 class DecoderRNN(nn.Module):
@@ -360,10 +438,8 @@ class DecoderRNN(nn.Module):
         output_size (int): Dimensionality of elements in output sequence (number of words in output language)
         layer_type (str, optional): Specifies type of RNN layer to be used ('GRU' or 'LSTM'). Default: GRU
     """
-    def __init__(self,
-                 hidden_size,
-                 output_size,
-                 layer_type='GRU'):
+
+    def __init__(self, hidden_size, output_size, layer_type="GRU"):
         super(DecoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -374,9 +450,7 @@ class DecoderRNN(nn.Module):
         self.out = nn.Linear(hidden_size, output_size)
         self.softmax = nn.LogSoftmax(dim=1)
 
-    def forward(self,
-                input,
-                hidden):
+    def forward(self, input, hidden):
         """Forward pass through RNN based decoder
 
         Args:
@@ -394,10 +468,27 @@ class DecoderRNN(nn.Module):
     def init_hidden(self):
         """Initialize the weights of the recurrent model"""
         if isinstance(self.rnn, nn.GRU) or isinstance(self.rnn, nn.RNN):
-            return torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device)
+            return torch.zeros(
+                self.num_directions * self.num_layers,
+                1,
+                self.hidden_size,
+                device=device,
+            )
         elif isinstance(self.rnn, nn.LSTM):
-            return (torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device),
-                    torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device))
+            return (
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+            )
 
 
 class AttnDecoderRNN(nn.Module):
@@ -411,12 +502,15 @@ class AttnDecoderRNN(nn.Module):
         max_length (int, optional): Maximum allowable length of input sequence (required for attention).
                                     Default: MAX_LENGTH
     """
-    def __init__(self,
-                 hidden_size,
-                 output_size,
-                 layer_type='GRU',
-                 dropout_p=0.1,
-                 max_length=MAX_LENGTH):
+
+    def __init__(
+        self,
+        hidden_size,
+        output_size,
+        layer_type="GRU",
+        dropout_p=0.1,
+        max_length=MAX_LENGTH,
+    ):
         super(AttnDecoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -432,10 +526,7 @@ class AttnDecoderRNN(nn.Module):
         self.rnn = self.rnn_model(self.hidden_size, self.hidden_size)
         self.out = nn.Linear(self.hidden_size, self.output_size)
 
-    def forward(self,
-                input,
-                hidden,
-                encoder_outputs):
+    def forward(self, input, hidden, encoder_outputs):
         """Forward pass through attention decoder
 
         Args:
@@ -451,7 +542,9 @@ class AttnDecoderRNN(nn.Module):
         # attn_weights = F.softmax(self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
         attn_state = hidden[0] if isinstance(hidden, tuple) else hidden
         attn_weights = F.softmax(attn_state[0] @ encoder_outputs.squeeze().t(), dim=1)
-        attn_applied = torch.bmm(attn_weights.unsqueeze(0), encoder_outputs.permute(1, 0, 2))
+        attn_applied = torch.bmm(
+            attn_weights.unsqueeze(0), encoder_outputs.permute(1, 0, 2)
+        )
 
         output = torch.cat((embedded[0], attn_applied[0]), 1)
         output = self.attn_combine(output).unsqueeze(0)
@@ -465,7 +558,24 @@ class AttnDecoderRNN(nn.Module):
     def init_hidden(self):
         """Initialize the weights of the recurrent model"""
         if isinstance(self.rnn, nn.GRU):
-            return torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device)
+            return torch.zeros(
+                self.num_directions * self.num_layers,
+                1,
+                self.hidden_size,
+                device=device,
+            )
         elif isinstance(self.rnn, nn.LSTM):
-            return (torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device),
-                    torch.zeros(self.num_directions * self.num_layers, 1, self.hidden_size, device=device))
+            return (
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+                torch.zeros(
+                    self.num_directions * self.num_layers,
+                    1,
+                    self.hidden_size,
+                    device=device,
+                ),
+            )

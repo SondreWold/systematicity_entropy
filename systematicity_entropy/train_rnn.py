@@ -3,6 +3,7 @@ import json
 import logging
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 from dataset import ScanDataset
@@ -45,6 +46,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.2, help="Dropout value")
     parser.add_argument(
         "--forcing", action="store_true", help="Whether or not to use teacher forcing"
+    )
+    parser.add_argument(
+        "--grad_acc",
+        action="store_true",
+        help="Whether or not to use gradient accumulation",
     )
     parser.add_argument("--grad_clip", type=float, default=5.0, help="Grad clip value")
     parser.add_argument(
@@ -114,10 +120,17 @@ def train(
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
             target_length = target_ids.size(0)
+            if args.forcing:
+                if np.random.uniform(0, 1) > 0.5:
+                    teacher_forcing = True
+                else:
+                    teacher_forcing = False
+            else:
+                teacher_forcing = False
             logits = model(
                 input_ids,
                 target_tensor=target_ids,
-                use_teacher_forcing=args.forcing,
+                use_teacher_forcing=teacher_forcing,
                 target_length=target_length,
             )
             loss = 0.0
@@ -128,18 +141,26 @@ def train(
                 _, decoder_output_symbol = decoder_output.topk(1)
                 if decoder_output_symbol.item() == train_dataset.eos_idx:
                     break
-            loss = loss / target_length
             loss.backward()
-            if ((idx + 1) % args.batch_size == 0) or (idx + 1 == len(train_dataset)):
-                torch.nn.utils.clip_grad_norm_(
-                    model.decoder.parameters(), args.grad_clip
-                )
-                torch.nn.utils.clip_grad_norm_(
-                    model.encoder.parameters(), args.grad_clip
-                )
+            if args.grad_acc:
+                if ((idx + 1) % args.batch_size == 0) or (
+                    idx + 1 == len(train_dataset)
+                ):
+                    torch.nn.utils.clip_grad_norm_(
+                        model.decoder.parameters(), args.grad_clip
+                    )
+                    torch.nn.utils.clip_grad_norm_(
+                        model.encoder.parameters(), args.grad_clip
+                    )
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad()
+            else:
                 optimizer.step()
                 scheduler.step()
                 optimizer.zero_grad()
+
+            loss = loss / target_length
             train_loss += loss.item()
 
         pbar.close()

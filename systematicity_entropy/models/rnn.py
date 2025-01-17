@@ -21,6 +21,7 @@ furnished to do so, subject to the following conditions:
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 """
+
 import abc
 
 import six
@@ -221,6 +222,7 @@ class BasicSeq2Seq(AbsSeq2Seq):
         syntax_tensor=None,
         target_tensor=None,
         use_teacher_forcing=False,
+        target_length=None,
     ):
         """Forward pass for model. Conditions on sentence in input language and generates a sentence in output language
 
@@ -256,7 +258,8 @@ class BasicSeq2Seq(AbsSeq2Seq):
 
         else:
             # Without teacher forcing: use its own predictions as the next input
-            for di in range(self.max_length):
+            length = target_length if target_length else self.max_length
+            for di in range(length):
                 if self.use_attention:
                     decoder_output, decoder_hidden, decoder_attention = self.decoder(
                         decoder_input, decoder_hidden, encoder_output

@@ -81,7 +81,8 @@ def test_scan_gen(model: nn.Module, val_data: ScanDataset) -> float:
     for i, sample in enumerate(val_data):
         pbar.update()
         input_ids, target_ids = sample
-        logits = model(input_ids)
+        target_length = target_ids.size(0)
+        logits = model(input_ids, target_length)
         _, sentence_ids = logits.data.topk(1)
         try:
             eos_location = (sentence_ids == val_data.eos_idx).nonzero()[0][0]

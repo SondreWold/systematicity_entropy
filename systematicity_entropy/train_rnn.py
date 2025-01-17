@@ -110,7 +110,9 @@ def train(
             input_ids, target_ids = sample
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
-            logits = model(input_ids, target_ids, True)
+            logits = model(
+                input_ids, target_tensor=target_ids, use_teacher_forcing=True
+            )
             loss = 0.0
 
             target_length = target_ids.size(0)
@@ -123,7 +125,6 @@ def train(
             loss = loss / target_length
             loss.backward()
             if ((idx + 1) % args.batch_size == 0) or (idx + 1 == len(train_dataset)):
-                optimizer.zero_grad()
                 torch.nn.utils.clip_grad_norm_(
                     model.decoder.parameters(), args.grad_clip
                 )
@@ -132,6 +133,7 @@ def train(
                 )
                 optimizer.step()
                 scheduler.step()
+                optimizer.zero_grad()
             train_loss += loss.item()
 
         pbar.close()
@@ -144,7 +146,7 @@ def train(
             input_ids, target_ids = sample
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
-            logits = model(input_ids, target_ids, True)
+            logits = model(input_ids)
             loss = 0.0
 
             target_length = target_ids.size(0)

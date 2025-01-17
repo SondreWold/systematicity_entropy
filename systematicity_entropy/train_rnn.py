@@ -113,12 +113,15 @@ def train(
             input_ids, target_ids = sample
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
+            target_length = target_ids.size(0)
             logits = model(
-                input_ids, target_tensor=target_ids, use_teacher_forcing=args.forcing
+                input_ids,
+                target_tensor=target_ids,
+                use_teacher_forcing=args.forcing,
+                target_length=target_length,
             )
             loss = 0.0
 
-            target_length = target_ids.size(0)
             for di in range(target_length):
                 decoder_output = logits[di]
                 loss += criterion(decoder_output[None, :], target_ids[di])

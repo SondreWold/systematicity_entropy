@@ -119,14 +119,16 @@ class DecoderLayer(nn.Module):
         super().__init__()
 
         self.dropout: nn.Dropout = nn.Dropout(dropout_p)
-        self.convolution: nn.Conv1d = nn.Conv1d(hidden_size, 2*hidden_size, kernel_size, padding="same")
+        self.convolution: nn.Conv1d = nn.Conv1d(hidden_size, 2*hidden_size, kernel_size)
         self.activation: nn.GLU = nn.GLU(dim=-1)
         self.attention: Attention = Attention(hidden_size)
+        self.kernel_size = kernel_size
 
     def forward(self, x: torch.Tensor, residual: torch.Tensor, encoder_outputs: torch.Tensor, input_embeddings: torch.Tensor, output_embeddings: torch.Tensor, encoder_padding_mask: torch.Tensor) -> torch.Tensor:
         x = self.dropout(x)
         x = x.transpose(-1, -2)
 
+        x = F.pad(x, (self.kernel_size - 1, 0))
         conv: torch.Tensor = self.convolution(x)
         conv = conv.transpose(-1, -2)
 

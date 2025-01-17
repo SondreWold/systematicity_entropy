@@ -230,6 +230,8 @@ def main():
     )
     model.encoder.to(DEVICE)
     model.decoder.to(DEVICE)
+    print(f"Model device: {next(model.parameters()).device}")
+    print(f"Data device: {training_set[0][0].device}")
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logging.info(f"Number of parameters: {params}")
 

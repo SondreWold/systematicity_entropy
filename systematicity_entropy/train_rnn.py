@@ -45,9 +45,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.2, help="Dropout value")
     parser.add_argument("--grad_clip", type=float, default=5.0, help="Grad clip value")
     parser.add_argument(
-        "--grad_acc_steps", type=float, default=32, help="Gradient accumulation steps"
-    )
-    parser.add_argument(
         "--epochs", type=int, default=10, help="Number of training epochs"
     )
     parser.add_argument(
@@ -125,9 +122,7 @@ def train(
                     break
             loss = loss / target_length
             loss.backward()
-            if ((idx + 1) % args.grad_acc_steps == 0) or (
-                idx + 1 == len(train_dataset)
-            ):
+            if ((idx + 1) % args.batch_size == 0) or (idx + 1 == len(train_dataset)):
                 optimizer.zero_grad()
                 torch.nn.utils.clip_grad_norm_(
                     model.decoder.parameters(), args.grad_clip

@@ -43,6 +43,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--weight_decay", type=float, default=1e-1, help="Weight decay")
     parser.add_argument("--dropout", type=float, default=0.2, help="Dropout value")
+    parser.add_argument(
+        "--forcing", action="store_true", help="Whether or not to use teacher forcing"
+    )
     parser.add_argument("--grad_clip", type=float, default=5.0, help="Grad clip value")
     parser.add_argument(
         "--epochs", type=int, default=10, help="Number of training epochs"
@@ -111,7 +114,7 @@ def train(
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
             logits = model(
-                input_ids, target_tensor=target_ids, use_teacher_forcing=True
+                input_ids, target_tensor=target_ids, use_teacher_forcing=args.forcing
             )
             loss = 0.0
 
@@ -208,6 +211,7 @@ def main():
         "hidden_size": args.hidden_size,
         "layers": args.layers,
         "rnn_type": args.type,
+        "teacher_forcing": args.forcing,
     }
     wandb.init(project=args.wandb, config=wandb_config)
 

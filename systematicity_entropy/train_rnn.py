@@ -45,9 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.2, help="Dropout value")
     parser.add_argument("--grad_clip", type=float, default=5.0, help="Grad clip value")
     parser.add_argument(
-        "--acc",
-        action="store_true",
-        help="When activated, calculate accuracy per eval epoch",
+        "--grad_acc_steps", type=float, default=32, help="Gradient accumulation steps"
     )
     parser.add_argument(
         "--epochs", type=int, default=10, help="Number of training epochs"
@@ -110,9 +108,8 @@ def train(
         train_loss = 0.0
         val_loss = 0.0
         pbar = tqdm(total=len(train_dataset))
-        for i, sample in enumerate(train_dataset):
+        for idx, sample in enumerate(train_dataset):
             pbar.update()
-            optimizer.zero_grad(set_to_none=True)
             input_ids, target_ids = sample
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
@@ -126,12 +123,20 @@ def train(
                 _, decoder_output_symbol = decoder_output.topk(1)
                 if decoder_output_symbol.item() == train_dataset.eos_idx:
                     break
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.decoder.parameters(), args.grad_clip)
-            torch.nn.utils.clip_grad_norm_(model.encoder.parameters(), args.grad_clip)
-            optimizer.step()
-            scheduler.step()
             loss = loss / target_length
+            loss.backward()
+            if ((idx + 1) % args.grad_acc_steps == 0) or (
+                idx + 1 == len(train_dataset)
+            ):
+                optimizer.zero_grad()
+                torch.nn.utils.clip_grad_norm_(
+                    model.decoder.parameters(), args.grad_clip
+                )
+                torch.nn.utils.clip_grad_norm_(
+                    model.encoder.parameters(), args.grad_clip
+                )
+                optimizer.step()
+                scheduler.step()
             train_loss += loss.item()
 
         pbar.close()
@@ -228,7 +233,8 @@ def main():
         bos_token_idx=training_set.bos_idx,
         eos_token_idx=training_set.eos_idx,
     )
-    model.to(DEVICE)
+    model.encoder.to(DEVICE)
+    model.decoder.to(DEVICE)
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logging.info(f"Number of parameters: {params}")
 

@@ -95,8 +95,8 @@ def train(
     model: torch.nn.Module,
     train_dataset: ScanDataset,
     val_dataset: ScanDataset,
-    optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler.LRScheduler,
+    e_optimizer: torch.optim.Optimizer,
+    d_optimizer: torch.optim.Optimizer,
     args: argparse.Namespace,
 ):
     prev_best_val_loss = 999.999
@@ -152,13 +152,15 @@ def train(
                     torch.nn.utils.clip_grad_norm_(
                         model.encoder.parameters(), args.grad_clip
                     )
-                    optimizer.step()
-                    scheduler.step()
-                    optimizer.zero_grad()
+                    e_optimizer.step()
+                    d_optimizer.step()
+                    e_optimizer.zero_grad()
+                    d_optimizer.zero_grad()
             else:
-                optimizer.step()
-                scheduler.step()
-                optimizer.zero_grad()
+                e_optimizer.step()
+                d_optimizer.step()
+                e_optimizer.zero_grad()
+                d_optimizer.zero_grad()
 
             loss = loss / target_length
             train_loss += loss.item()
@@ -265,17 +267,24 @@ def main():
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logging.info(f"Number of parameters: {params}")
 
-    optimizer = torch.optim.AdamW(
-        list(model.encoder.parameters()) + list(model.decoder.parameters()),
+    e_optimizer = torch.optim.AdamW(
+        model.encoder.parameters(),
         lr=args.learning_rate,
         betas=(0.9, 0.98),
     )
-    max_steps = len(training_set) * args.epochs
+    d_optimizer = torch.optim.AdamW(
+        model.decoder.parameters(),
+        lr=args.learning_rate,
+        betas=(0.9, 0.98),
+    )
+    #max_steps = len(training_set) * args.epochs
+    """
     scheduler = cosine_schedule_with_warmup(
         optimizer, int(max_steps * 0.06), max_steps, 0.1
     )
+    """
 
-    train(model, training_set, validation_set, optimizer, scheduler, args)
+    train(model, training_set, validation_set, e_optimizer, d_optimizer, args)
 
 
 if __name__ == "__main__":

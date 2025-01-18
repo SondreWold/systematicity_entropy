@@ -171,7 +171,6 @@ def train(
         pbar = tqdm(total=len(val_dataset))
         for i, sample in enumerate(val_dataset):
             pbar.update()
-            optimizer.zero_grad(set_to_none=True)
             input_ids, target_ids = sample
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)

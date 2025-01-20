@@ -102,7 +102,7 @@ class EncoderLayer(nn.Module):
         nn.init.normal_(self.convolution.weight, 0.0, math.sqrt(4*(1.0 - dropout_p)/(kernel_size * hidden_size)))
         self.convolution.bias.data.zero_()
         if self.projection is not None:
-            nn.init(self.projection.weight, 0.0, math.sqrt(1/self.hidden_size))
+            nn.init.normal_(self.projection.weight, 0.0, math.sqrt(1/hidden_size))
             self.projection.bias.data.zero_()
 
     def forward(self, x: torch.Tensor, residual: torch.Tensor) -> torch.Tensor:
@@ -175,7 +175,7 @@ class DecoderLayer(nn.Module):
         nn.init.normal_(self.convolution.weight, 0.0, math.sqrt(4*(1.0 - dropout_p)/(self.kernel_size * hidden_size)))
         self.convolution.bias.data.zero_()
         if self.projection is not None:
-            nn.init(self.projection.weight, 0.0, math.sqrt(1/self.hidden_size))
+            nn.init.normal_(self.projection.weight, 0.0, math.sqrt(1/hidden_size))
             self.projection.bias.data.zero_()
 
     def forward(self, x: torch.Tensor, residual: torch.Tensor, encoder_outputs: torch.Tensor, input_embeddings: torch.Tensor, output_embeddings: torch.Tensor, encoder_padding_mask: torch.Tensor) -> torch.Tensor:
@@ -274,3 +274,8 @@ class GradMultiply(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad):
         return grad * ctx.scale, None
+
+
+if __name__ == "__main__":
+    model = CNN(256, 5, 0.1, 22, 32, 2, 2)
+    print(model)

@@ -3,6 +3,7 @@ import json
 import logging
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 from dataset import ScanDataset
@@ -45,6 +46,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.2, help="Dropout value")
     parser.add_argument(
         "--forcing", action="store_true", help="Whether or not to use teacher forcing"
+    )
+    parser.add_argument(
+        "--grad_acc",
+        action="store_true",
+        help="Whether or not to use gradient accumulation",
     )
     parser.add_argument("--grad_clip", type=float, default=5.0, help="Grad clip value")
     parser.add_argument(
@@ -89,8 +95,8 @@ def train(
     model: torch.nn.Module,
     train_dataset: ScanDataset,
     val_dataset: ScanDataset,
-    optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler.LRScheduler,
+    e_optimizer: torch.optim.Optimizer,
+    d_optimizer: torch.optim.Optimizer,
     args: argparse.Namespace,
 ):
     prev_best_val_loss = 999.999
@@ -113,30 +119,50 @@ def train(
             input_ids, target_ids = sample
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
+            target_length = target_ids.size(0)
+            if args.forcing:
+                if np.random.uniform(0, 1) > 0.5:
+                    teacher_forcing = True
+                else:
+                    teacher_forcing = False
+            else:
+                teacher_forcing = False
             logits = model(
-                input_ids, target_tensor=target_ids, use_teacher_forcing=args.forcing
+                input_ids,
+                target_tensor=target_ids,
+                use_teacher_forcing=teacher_forcing,
+                target_length=target_length,
             )
             loss = 0.0
 
-            target_length = target_ids.size(0)
             for di in range(target_length):
                 decoder_output = logits[di]
                 loss += criterion(decoder_output[None, :], target_ids[di])
                 _, decoder_output_symbol = decoder_output.topk(1)
                 if decoder_output_symbol.item() == train_dataset.eos_idx:
                     break
-            loss = loss / target_length
             loss.backward()
-            if ((idx + 1) % args.batch_size == 0) or (idx + 1 == len(train_dataset)):
-                torch.nn.utils.clip_grad_norm_(
-                    model.decoder.parameters(), args.grad_clip
-                )
-                torch.nn.utils.clip_grad_norm_(
-                    model.encoder.parameters(), args.grad_clip
-                )
-                optimizer.step()
-                scheduler.step()
-                optimizer.zero_grad()
+            if args.grad_acc:
+                if ((idx + 1) % args.batch_size == 0) or (
+                    idx + 1 == len(train_dataset)
+                ):
+                    torch.nn.utils.clip_grad_norm_(
+                        model.decoder.parameters(), args.grad_clip
+                    )
+                    torch.nn.utils.clip_grad_norm_(
+                        model.encoder.parameters(), args.grad_clip
+                    )
+                    e_optimizer.step()
+                    d_optimizer.step()
+                    e_optimizer.zero_grad()
+                    d_optimizer.zero_grad()
+            else:
+                e_optimizer.step()
+                d_optimizer.step()
+                e_optimizer.zero_grad()
+                d_optimizer.zero_grad()
+
+            loss = loss / target_length
             train_loss += loss.item()
 
         pbar.close()
@@ -145,7 +171,6 @@ def train(
         pbar = tqdm(total=len(val_dataset))
         for i, sample in enumerate(val_dataset):
             pbar.update()
-            optimizer.zero_grad(set_to_none=True)
             input_ids, target_ids = sample
             input_ids = input_ids.view(-1, 1)
             target_ids = target_ids.view(-1, 1)
@@ -241,17 +266,24 @@ def main():
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     logging.info(f"Number of parameters: {params}")
 
-    optimizer = torch.optim.AdamW(
-        list(model.encoder.parameters()) + list(model.decoder.parameters()),
+    e_optimizer = torch.optim.AdamW(
+        model.encoder.parameters(),
         lr=args.learning_rate,
         betas=(0.9, 0.98),
     )
-    max_steps = len(training_set) * args.epochs
+    d_optimizer = torch.optim.AdamW(
+        model.decoder.parameters(),
+        lr=args.learning_rate,
+        betas=(0.9, 0.98),
+    )
+    #max_steps = len(training_set) * args.epochs
+    """
     scheduler = cosine_schedule_with_warmup(
         optimizer, int(max_steps * 0.06), max_steps, 0.1
     )
+    """
 
-    train(model, training_set, validation_set, optimizer, scheduler, args)
+    train(model, training_set, validation_set, e_optimizer, d_optimizer, args)
 
 
 if __name__ == "__main__":

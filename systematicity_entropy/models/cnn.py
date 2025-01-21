@@ -44,6 +44,62 @@ class CNN(nn.Module):
             )
         self.pad_token = pad_token
 
+    def decode_step(
+        self,
+        output_ids: torch.Tensor,
+        encoder_outputs: torch.Tensor,
+        input_embeddings: torch.Tensor,
+        padding_mask: torch.Tensor
+    ) -> torch.Tensor:
+        decoder_outputs: torch.Tensor = self.decoder(
+            output_ids, encoder_outputs, input_embeddings, padding_mask
+        )
+
+        logits: torch.Tensor = self.classifier(decoder_outputs)
+
+        return logits
+
+    def test_generate(
+        self,
+        input_ids: torch.Tensor,
+        padding_mask: torch.Tensor,
+        max_new_tokens: int,
+        pad_idx: int,
+        bos_idx: int,
+        eos_idx: int,
+        itoc: dict
+    ) -> torch.Tensor:
+        encoder_outputs: torch.Tensor
+        input_embeddings: torch.Tensor
+
+        encoder_outputs, input_embeddings = self.encoder(input_ids)
+
+        target = torch.full(
+            [encoder_outputs.size(0), 1], fill_value=bos_idx, device=input_ids.device
+        )
+        stop = torch.zeros(target.size(0), dtype=torch.bool, device=target.device)
+        for _ in range(max_new_tokens):
+            prediction: torch.Tensor = self.decode_step(
+                target, encoder_outputs, input_embeddings, padding_mask
+            )[
+                :, -1
+            ]
+            prediction = torch.where(stop, pad_idx, prediction.argmax(-1))
+            stop |= prediction == eos_idx
+            stop |= prediction == pad_idx
+            target = torch.cat([target, prediction.unsqueeze(1)], dim=1)
+            if stop.all():
+                break
+        sentences = []
+        for batch in target:
+            sent = []
+            for token in batch[1:]:
+                if token.item() == eos_idx:
+                    break
+                sent.append(token.item())
+            sentences.append(sent)
+        return sentences
+
     def forward(
         self,
         input_ids: torch.Tensor,

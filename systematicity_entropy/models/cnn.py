@@ -107,7 +107,8 @@ class Encoder(nn.Module):
         embeddings: torch.Tensor = self.positional_embedding(self.embedding(input_ids))
         embeddings = self.dropout(embeddings)
 
-        hidden_states: torch.Tensor = self.in_proj(embeddings)
+        projected_embeddings: torch.Tensor = self.in_proj(embeddings)
+        hidden_states: torch.Tensor = projected_embeddings
 
         x: torch.Tensor = embeddings
 
@@ -119,7 +120,7 @@ class Encoder(nn.Module):
 
         output = GradMultiply.apply(output, 1.0 / (2.0 * self.num_decoder_layers))
 
-        return output, embeddings
+        return output, projected_embeddings
 
 
 class EncoderLayer(nn.Module):
@@ -292,8 +293,6 @@ class DecoderLayer(nn.Module):
             encoder_padding_mask,
         )
 
-        conv_output: torch.Tensor = (outputs + residual) * math.sqrt(0.5)
-
         return outputs
 
 
@@ -368,12 +367,12 @@ class Attention(nn.Module):
 
         output: torch.Tensor = (
             torch.bmm(
-                attention_scores, (encoder_outputs + input_embeddings) * math.sqrt(0.5)
+                attention_scores, input_embeddings
             )
             * scale
         )
 
-        return output + x
+        return (output + x) * math.sqrt(0.5)
 
 
 class PositionalEncoding(nn.Module):

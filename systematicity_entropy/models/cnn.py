@@ -80,7 +80,7 @@ class CNN(nn.Module):
         stop = torch.zeros(target.size(0), dtype=torch.bool, device=target.device)
         for _ in range(max_new_tokens):
             prediction: torch.Tensor = self.decode_step(
-                target, encoder_outputs, input_embeddings, padding_mask
+                target, encoder_outputs, input_embeddings, padding_mask.unsqueeze(1)
             )[
                 :, -1
             ]

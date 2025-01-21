@@ -349,7 +349,7 @@ class DecoderLayer(nn.Module):
             encoder_padding_mask,
         )
 
-        return outputs
+        return (outputs + residual) * math.sqrt(0.5)
 
 
 class Classifier(nn.Module):

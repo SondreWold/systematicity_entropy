@@ -141,13 +141,17 @@ def train(
                 _, decoder_output_symbol = decoder_output.topk(1)
                 if decoder_output_symbol.item() == train_dataset.eos_idx:
                     break
+
+            loss = loss / target_length
             loss.backward()
+            """
             torch.nn.utils.clip_grad_norm_(
                     model.decoder.parameters(), args.grad_clip
                     )
             torch.nn.utils.clip_grad_norm_(
                     model.encoder.parameters(), args.grad_clip
                     )
+            """
             if args.grad_acc:
                 if ((idx + 1) % args.batch_size == 0) or (
                         idx + 1 == len(train_dataset)
@@ -162,7 +166,6 @@ def train(
                 e_optimizer.zero_grad()
                 d_optimizer.zero_grad()
 
-            loss = loss / target_length
             train_loss += loss.item()
 
         pbar.close()

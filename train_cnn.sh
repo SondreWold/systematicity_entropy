@@ -1,0 +1,15 @@
+WANDB_MODE=disabled python systematicity_entropy/train_cnn.py \
+    --train_path data/uniform.txt \
+    --val_path data/test.txt \
+    --save_path test_cnn_model \
+    --batch_size 32 \
+    --epochs 20 \
+    --learning_rate 3e-4 \
+    --layers 2 \
+    --hidden_size 256 \
+    --kernel_size 3 \
+    --task scan \
+    --patience 999 \
+    --dropout 0.1 \
+    --seed 42 \
+    --wandb debug

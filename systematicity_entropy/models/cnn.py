@@ -17,6 +17,7 @@ class CNN(nn.Module):
         output_vocab_size: int,
         num_encoder_layers: int,
         num_decoder_layers: int,
+        pad_token: int,
         share_weights: bool = True
     ) -> None:
         super().__init__()
@@ -27,6 +28,7 @@ class CNN(nn.Module):
             self.classifier: Classifier = Classifier(hidden_size, output_vocab_size, dropout_p, self.decoder.embedding.weight)
         else:
             self.classifier: Classifier = Classifier(hidden_size, output_vocab_size, dropout_p)
+        self.pad_token = pad_token
 
     def forward(self, input_ids: torch.Tensor, output_ids: torch.Tensor, padding_mask: torch.Tensor) -> torch.Tensor:
         encoder_outputs: torch.Tensor
@@ -215,7 +217,7 @@ class Classifier(nn.Module):
 
     def forward(self: Classifier, logits: torch.Tensor) -> torch.Tensor:
         predictions: torch.Tensor = self.emb_to_vocab(self.dropout(logits))
-        return F.softmax(predictions, dim=-1)
+        return predictions
 
 
 class Attention(nn.Module):

@@ -166,3 +166,13 @@ cython_debug/
 
 # Poetry
 poetry.lock
+
+# WandB
+wandb/
+
+# Data
+data/
+data.zip
+
+# Model Weights
+trained_models/

@@ -16,13 +16,19 @@ class CNN(nn.Module):
         input_vocab_size: int,
         output_vocab_size: int,
         num_encoder_layers: int,
-        num_decoder_layers: int
+        num_decoder_layers: int,
+        pad_token: int,
+        share_weights: bool = True
     ) -> None:
         super().__init__()
 
         self.encoder: Encoder = Encoder(hidden_size, kernel_size, dropout_p, input_vocab_size, num_encoder_layers, num_decoder_layers)
         self.decoder: Decoder = Decoder(hidden_size, kernel_size, dropout_p, output_vocab_size, num_decoder_layers)
-        self.classifier: Classifier = Classifier()
+        if share_weights:
+            self.classifier: Classifier = Classifier(hidden_size, output_vocab_size, dropout_p, self.decoder.embedding.weight)
+        else:
+            self.classifier: Classifier = Classifier(hidden_size, output_vocab_size, dropout_p)
+        self.pad_token = pad_token
 
     def forward(self, input_ids: torch.Tensor, output_ids: torch.Tensor, padding_mask: torch.Tensor) -> torch.Tensor:
         encoder_outputs: torch.Tensor
@@ -44,17 +50,29 @@ class Encoder(nn.Module):
 
         self.embedding: nn.Embedding = nn.Embedding(vocab_size, hidden_size)
         self.positional_embedding: PositionalEncoding = PositionalEncoding(hidden_size)
+        self.dropout: nn.Dropout = nn.Dropout(dropout_p)
 
         self.in_proj: nn.Linear = nn.Linear(hidden_size, hidden_size)
         self.out_proj: nn.Linear = nn.Linear(hidden_size, hidden_size)
 
-        self.layers: nn.ModuleList[EncoderLayer] = nn.ModuleList([EncoderLayer(hidden_size, kernel_size, dropout_p) for _ in range(num_layers)])
+        self.layers: nn.ModuleList[EncoderLayer] = nn.ModuleList([EncoderLayer(hidden_size, kernel_size, dropout_p, i) for i in range(num_layers)])
 
         self.num_decoder_layers: int = num_decoder_layers
+        self.initialize(hidden_size, dropout_p)
+
+    def initialize(self, hidden_size: int, dropout_p: float) -> None:
+        nn.init.normal_(self.in_proj.weight, 0.0, math.sqrt((1.0 - dropout_p)/(hidden_size)))
+        nn.init.normal_(self.out_proj.weight, 0.0, math.sqrt(1.0/(hidden_size)))
+        nn.init.normal_(self.embedding.weight, 0.0, 0.1)
+        self.in_proj.bias.data.zero_()
+        self.out_proj.bias.data.zero_()
 
     def forward(self, input_ids: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         embeddings: torch.Tensor = self.positional_embedding(self.embedding(input_ids))
+        embeddings = self.dropout(embeddings)
+
         hidden_states: torch.Tensor = self.in_proj(embeddings)
+
         x: torch.Tensor = embeddings
 
         for layer in self.layers:
@@ -70,16 +88,31 @@ class Encoder(nn.Module):
 
 class EncoderLayer(nn.Module):
 
-    def __init__(self, hidden_size: int, kernel_size: int, dropout_p: float) -> None:
+    def __init__(self, hidden_size: int, kernel_size: int, dropout_p: float, layer: int) -> None:
         super().__init__()
 
         self.dropout: nn.Dropout = nn.Dropout(dropout_p)
+        if layer != 0:
+            self.projection: nn.Linear = nn.Linear(hidden_size, hidden_size)
+        else:
+            self.projection: None = None
         self.convolution: nn.Conv1d = nn.Conv1d(hidden_size, 2*hidden_size, kernel_size, padding="same")
         self.activation: nn.GLU = nn.GLU(dim=-1)
+        self.initialize(hidden_size, kernel_size, dropout_p)
+
+    def initialize(self, hidden_size: int, kernel_size: int, dropout_p: float) -> None:
+        nn.init.normal_(self.convolution.weight, 0.0, math.sqrt(4*(1.0 - dropout_p)/(kernel_size * hidden_size)))
+        self.convolution.bias.data.zero_()
+        if self.projection is not None:
+            nn.init.normal_(self.projection.weight, 0.0, math.sqrt(1/hidden_size))
+            self.projection.bias.data.zero_()
 
     def forward(self, x: torch.Tensor, residual: torch.Tensor) -> torch.Tensor:
         x = self.dropout(x)
         x = x.transpose(-1, -2)
+
+        if self.projection is not None:
+            residual = self.projection(residual)
 
         conv: torch.Tensor = self.convolution(x)
         conv = conv.transpose(-1, -2)
@@ -96,14 +129,25 @@ class Decoder(nn.Module):
 
         self.embedding: nn.Embedding = nn.Embedding(vocab_size, hidden_size)
         self.positional_embedding: PositionalEncoding = PositionalEncoding(hidden_size)
+        self.dropout: nn.Dropout = nn.Dropout(dropout_p)
 
+        self.in_proj: nn.Linear = nn.Linear(hidden_size, hidden_size)
         self.out_proj: nn.Linear = nn.Linear(hidden_size, hidden_size)
 
-        self.layers: nn.ModuleList[DecoderLayer] = nn.ModuleList([DecoderLayer(hidden_size, kernel_size, dropout_p) for _ in range(num_layers)])
+        self.layers: nn.ModuleList[DecoderLayer] = nn.ModuleList([DecoderLayer(hidden_size, kernel_size, dropout_p, i) for i in range(num_layers)])
+        self.initialize(hidden_size, dropout_p)
+
+    def initialize(self, hidden_size: int, dropout_p: float) -> None:
+        nn.init.normal_(self.in_proj.weight, 0.0, math.sqrt((1.0 - dropout_p)/(hidden_size)))
+        nn.init.normal_(self.out_proj.weight, 0.0, math.sqrt((1.0 - dropout_p)/(hidden_size)))
+        nn.init.normal_(self.embedding.weight, 0.0, 0.1)
+        self.in_proj.bias.data.zero_()
+        self.out_proj.bias.data.zero_()
 
     def forward(self, output_ids: torch.Tensor, encoder_outputs: torch.Tensor, input_embeddings: torch.Tensor, encoder_padding_mask: torch.Tensor) -> torch.Tensor:
         output_embeddings: torch.Tensor = self.positional_embedding(self.embedding(output_ids))
-        hidden_states: torch.Tensor = output_embeddings
+        output_embeddings = self.dropout(output_embeddings)
+        hidden_states: torch.Tensor = self.in_proj(output_embeddings)
 
         for layer in self.layers:
             hidden_states = layer(hidden_states, hidden_states, encoder_outputs, input_embeddings, output_embeddings, encoder_padding_mask)
@@ -115,18 +159,33 @@ class Decoder(nn.Module):
 
 class DecoderLayer(nn.Module):
 
-    def __init__(self, hidden_size: int, kernel_size: int, dropout_p: float) -> None:
+    def __init__(self, hidden_size: int, kernel_size: int, dropout_p: float, layer: int) -> None:
         super().__init__()
 
         self.dropout: nn.Dropout = nn.Dropout(dropout_p)
+        if layer != 0:
+            self.projection: nn.Linear = nn.Linear(hidden_size, hidden_size)
+        else:
+            self.projection = None
         self.convolution: nn.Conv1d = nn.Conv1d(hidden_size, 2*hidden_size, kernel_size)
         self.activation: nn.GLU = nn.GLU(dim=-1)
         self.attention: Attention = Attention(hidden_size)
         self.kernel_size = kernel_size
+        self.initialize(hidden_size, dropout_p)
+
+    def initialize(self, hidden_size: int, dropout_p: float) -> None:
+        nn.init.normal_(self.convolution.weight, 0.0, math.sqrt(4*(1.0 - dropout_p)/(self.kernel_size * hidden_size)))
+        self.convolution.bias.data.zero_()
+        if self.projection is not None:
+            nn.init.normal_(self.projection.weight, 0.0, math.sqrt(1/hidden_size))
+            self.projection.bias.data.zero_()
 
     def forward(self, x: torch.Tensor, residual: torch.Tensor, encoder_outputs: torch.Tensor, input_embeddings: torch.Tensor, output_embeddings: torch.Tensor, encoder_padding_mask: torch.Tensor) -> torch.Tensor:
         x = self.dropout(x)
         x = x.transpose(-1, -2)
+
+        if self.projection is not None:
+            residual = self.projection(residual)
 
         x = F.pad(x, (self.kernel_size - 1, 0))
         conv: torch.Tensor = self.convolution(x)
@@ -143,11 +202,22 @@ class DecoderLayer(nn.Module):
 
 class Classifier(nn.Module):
 
-    def __init__(self) -> None:
+    def __init__(self: Classifier, hidden_size: int, vocab_size: int, dropout_p: float, embedding_weights: nn.Parameter | None = None) -> None:
         super().__init__()
+        self.emb_to_vocab = nn.Linear(hidden_size, vocab_size)
+        self.dropout = nn.Dropout(dropout_p)
+        self.initialize(hidden_size, dropout_p, embedding_weights)
 
-    def forward(self, logits: torch.Tensor) -> torch.Tensor:
-        return F.softmax(logits, dim=-1)
+    def initialize(self: Classifier, hidden_size: int, dropout_p: float, embedding_weights: nn.Parameter | None) -> None:
+        if embedding_weights is not None:
+            self.emb_to_vocab.weight = embedding_weights
+        else:
+            nn.init.normal_(self.emb_to_vocab, 0.0, math.sqrt((1 - dropout_p)/hidden_size))
+        self.emb_to_vocab.bias.data.zero_()
+
+    def forward(self: Classifier, logits: torch.Tensor) -> torch.Tensor:
+        predictions: torch.Tensor = self.emb_to_vocab(self.dropout(logits))
+        return predictions
 
 
 class Attention(nn.Module):
@@ -156,6 +226,11 @@ class Attention(nn.Module):
         super().__init__()
 
         self.projection: nn.Linear = nn.Linear(hidden_size, hidden_size)
+        self.initialize(hidden_size)
+
+    def initialize(self, hidden_size: int) -> None:
+        nn.init.normal_(self.projection.weight, 0.0, math.sqrt(1.0 / hidden_size))
+        self.projection.bias.data.zero_()
 
     def forward(self, x: torch.Tensor, encoder_outputs: torch.Tensor, input_embeddings: torch.Tensor, output_embeddings: torch.Tensor, encoder_padding_mask: torch.Tensor) -> torch.Tensor:
         input_sequence_length: int = input_embeddings.size(1)
@@ -201,3 +276,8 @@ class GradMultiply(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad):
         return grad * ctx.scale, None
+
+
+if __name__ == "__main__":
+    model = CNN(256, 5, 0.1, 22, 32, 2, 2)
+    print(model)

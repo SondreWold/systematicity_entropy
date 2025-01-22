@@ -418,7 +418,7 @@ class RotaryPositionalEmbeddings(nn.Module):
         cos_matrix = self.cos_matrix[:, :seq_len]
         sin_matrix = self.sin_matrix[:, :seq_len]
 
-        x_rotate_half = torch.stack([-x[..., 1::2], x[..., ::2]], dim=-1).reshape_as(x)
+        x_rotate_half = torch.cat([-x[..., x.size(-1)//2:], x[..., :x.size(-1)//2]], dim=-1)
 
         out = x * cos_matrix + x_rotate_half * sin_matrix
 

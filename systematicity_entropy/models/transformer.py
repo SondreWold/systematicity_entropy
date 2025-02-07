@@ -18,6 +18,9 @@ class Transformer(nn.Module):
         hidden_size: int,
         dropout: float,
         pad_idx: int,
+        rope_theta: int,
+        input_bucket_size: int,
+        output_bucket_size: int,
     ):
         super().__init__()
         self.input_vocabulary_size = input_vocabulary_size

@@ -66,6 +66,24 @@ def parse_args() -> argparse.Namespace:
         help="The hidden size of the model layers",
     )
     parser.add_argument(
+        "--input_bucket_size",
+        type=int,
+        default=32,
+        help="The input bucket size for each level of relative position.",
+    )
+    parser.add_argument(
+        "--output_bucket_size",
+        type=int,
+        default=32,
+        help="The output bucket size for each level of relative position.",
+    )
+    parser.add_argument(
+        "--rope_theta",
+        type=int,
+        default=10_000,
+        help="The angle change for rope.",
+    )
+    parser.add_argument(
         "--patience",
         type=int,
         default=3,
@@ -82,7 +100,7 @@ def parse_args() -> argparse.Namespace:
         "--type",
         type=str,
         default="van",
-        choices=["van", "rope", "rel"],
+        choices=["van", "rope", "rel", "learn"],
         help="Which Transformer to use",
     )
     return parser.parse_args()
@@ -231,6 +249,9 @@ def main():
         "hidden_size": args.hidden_size,
         "layers": args.layers,
         "type": args.type,
+        "rope_theta": args.rope_theta,
+        "input_bucket_size": args.input_bucket_size,
+        "output_bucket_size": args.output_bucket_size,
     }
     wandb.init(project=args.wandb, config=wandb_config)
 
@@ -240,6 +261,8 @@ def main():
         from systematicity_entropy.models.transformer_rope import Transformer
     elif args.type == "rel":
         from systematicity_entropy.models.transformer_relative import Transformer
+    elif args.type =="learn":
+        from systematicity_entropy.models.transformer_learned import Transformer
 
     training_set = DATASET_MAP[args.task](
         args.train_path, device=DEVICE, task=args.task
@@ -267,6 +290,9 @@ def main():
         args.hidden_size,
         args.dropout,
         training_set.pad_idx,
+        args.rope_theta,
+        args.input_bucket_size,
+        args.output_bucket_size,
     ).to(DEVICE)
 
     params = sum(p.numel() for p in model.parameters() if p.requires_grad)

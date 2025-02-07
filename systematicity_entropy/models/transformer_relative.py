@@ -20,6 +20,9 @@ class Transformer(nn.Module):
         hidden_size: int,
         dropout: float,
         pad_idx: int,
+        rope_theta: int,
+        input_bucket_size: int,
+        output_bucket_size: int,
     ):
         super().__init__()
         self.input_vocabulary_size = input_vocabulary_size
@@ -37,16 +40,16 @@ class Transformer(nn.Module):
             self.output_vocabulary_size, self.hidden_size
         )
         self.source_positional_embedding = RelativePositionalEmbeddings(
-            hidden_size, position_bucket_size=8
+            hidden_size, position_bucket_size=input_bucket_size
         )
         self.encoder = Encoder(
-            self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout
+            self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout, input_bucket_size
         )
         self.target_positional_embedding = RelativePositionalEmbeddings(
-            hidden_size, position_bucket_size=64
+            hidden_size, position_bucket_size=output_bucket_size
         )
         self.decoder = Decoder(
-            self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout
+                self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout, input_bucket_size, output_bucket_size
         )
         self.projection = nn.Linear(self.hidden_size, self.output_vocabulary_size)
         self.init_weights()
@@ -128,10 +131,10 @@ class Transformer(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, num_layers, hidden_size, num_heads, dropout):
+    def __init__(self, num_layers, hidden_size, num_heads, dropout, bucket_size):
         super().__init__()
         self.layers = nn.ModuleList(
-            EncoderLayer(hidden_size, num_heads, dropout) for _ in range(num_layers)
+            EncoderLayer(hidden_size, num_heads, dropout, bucket_size) for _ in range(num_layers)
         )
         self.output_norm = nn.LayerNorm(hidden_size)
 
@@ -143,10 +146,10 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, num_layers, hidden_size, num_heads, dropout):
+    def __init__(self, num_layers, hidden_size, num_heads, dropout, input_bucket_size, output_bucket_size):
         super().__init__()
         self.layers = nn.ModuleList(
-            DecoderLayer(hidden_size, num_heads, dropout) for _ in range(num_layers)
+            DecoderLayer(hidden_size, num_heads, dropout, input_bucket_size, output_bucket_size) for _ in range(num_layers)
         )
         self.output_norm = nn.LayerNorm(hidden_size)
 
@@ -184,14 +187,14 @@ class Decoder(nn.Module):
 
 
 class EncoderLayer(nn.Module):
-    def __init__(self, hidden_size, num_heads, dropout):
+    def __init__(self, hidden_size, num_heads, dropout, bucket_size):
         super().__init__()
         self.self_attention = RelativeMultiHeadAttention(
             hidden_size,
             num_heads,
             dropout,
-            query_position_bucket_size=8,
-            key_position_bucket_size=8,
+            query_position_bucket_size=bucket_size,
+            key_position_bucket_size=bucket_size,
         )
         self.norm_1 = nn.LayerNorm(hidden_size)
         self.feed_forward = FeedForward(hidden_size)
@@ -216,22 +219,22 @@ class EncoderLayer(nn.Module):
 
 
 class DecoderLayer(nn.Module):
-    def __init__(self, hidden_size, num_heads, dropout):
+    def __init__(self, hidden_size, num_heads, dropout, input_bucket_size, output_bucket_size):
         super().__init__()
         self.self_attention = RelativeMultiHeadAttention(
             hidden_size,
             num_heads,
             dropout,
-            query_position_bucket_size=64,
-            key_position_bucket_size=64,
+            query_position_bucket_size=output_bucket_size,
+            key_position_bucket_size=output_bucket_size,
         )
         self.norm_1 = nn.LayerNorm(hidden_size)
         self.cross_attention = RelativeMultiHeadAttention(
             hidden_size,
             num_heads,
             dropout,
-            query_position_bucket_size=64,
-            key_position_bucket_size=8,
+            query_position_bucket_size=output_bucket_size,
+            key_position_bucket_size=input_bucket_size,
         )
         self.norm_2 = nn.LayerNorm(hidden_size)
         self.feed_forward = FeedForward(hidden_size)

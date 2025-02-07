@@ -44,6 +44,24 @@ def parse_args() -> argparse.Namespace:
         help="The hidden size of the model layers",
     )
     parser.add_argument(
+        "--input_bucket_size",
+        type=int,
+        default=32,
+        help="The input bucket size for each level of relative position.",
+    )
+    parser.add_argument(
+        "--output_bucket_size",
+        type=int,
+        default=32,
+        help="The output bucket size for each level of relative position.",
+    )
+    parser.add_argument(
+        "--rope_theta",
+        type=int,
+        default=10_000,
+        help="The angle change for rope.",
+    )
+    parser.add_argument(
         "--seed", type=int, default=42, help="Random seed for reproducibility."
     )
     parser.add_argument(
@@ -57,7 +75,7 @@ def parse_args() -> argparse.Namespace:
         "--type",
         type=str,
         default="van",
-        choices=["van", "rope", "rel"],
+        choices=["van", "rope", "rel", "learn"],
         help="Which Transformer to use",
     )
     return parser.parse_args()
@@ -118,13 +136,15 @@ def main():
         from systematicity_entropy.models.transformer_rope import Transformer
     elif args.type == "rel":
         from systematicity_entropy.models.transformer_relative import Transformer
+    elif args.type == "learn":
+        from systematicity_entropy.models.transformer_learned import Transformer
 
     val = DATASET_MAP[args.task](args.val_path, device=DEVICE, task=args.task)
     vocab_size = len(val.ctoi.keys())
     checkpoint = torch.load(args.model_path, map_location=torch.device("cpu"))
 
     model = Transformer(
-        vocab_size, vocab_size, args.layers, args.hidden_size, 0.1, val.pad_idx
+        vocab_size, vocab_size, args.layers, args.hidden_size, 0.1, val.pad_idx, args.rope_theta, args.input_bucket_size, args.output_bucket_size
     )
     model.load_state_dict(checkpoint)
     model.to(DEVICE)

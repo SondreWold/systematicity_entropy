@@ -261,7 +261,7 @@ def main():
         from systematicity_entropy.models.transformer_rope import Transformer
     elif args.type == "rel":
         from systematicity_entropy.models.transformer_relative import Transformer
-    elif args.type =="learn":
+    elif args.type == "learn":
         from systematicity_entropy.models.transformer_learned import Transformer
 
     training_set = DATASET_MAP[args.task](

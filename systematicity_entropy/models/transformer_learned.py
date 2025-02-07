@@ -37,10 +37,11 @@ class Transformer(nn.Module):
         self.output_embedding = nn.Embedding(
             self.output_vocabulary_size, self.hidden_size
         )
-        self.positional_embedding = PositionalEncoding(hidden_size)
+        self.encoder_positional_embedding = PositionalEncoding(hidden_size)
         self.encoder = Encoder(
             self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout
         )
+        self.decoder_positional_embedding = PositionalEncoding(hidden_size)
         self.decoder = Decoder(
             self.num_transformer_layers, self.hidden_size, self.num_heads, self.dropout
         )
@@ -50,8 +51,8 @@ class Transformer(nn.Module):
     def forward(self, source, source_padding_mask, target, target_padding_mask):
         source = self.input_embedding(source)
         target = self.output_embedding(target)
-        source = source + self.positional_embedding(source)
-        target = target + self.positional_embedding(target)
+        source = source + self.encoder_positional_embedding(source)
+        target = target + self.decoder_positional_embedding(target)
         memory = self.encoder(source, source_padding_mask)
         output = self.decoder(target, target_padding_mask, memory, source_padding_mask)
         output = self.projection(output)
@@ -59,12 +60,12 @@ class Transformer(nn.Module):
 
     def encode_source(self, source, source_padding_mask):
         source = self.input_embedding(source)
-        source = source + self.positional_embedding(source)
+        source = source + self.encoder_positional_embedding(source)
         return self.encoder(source, source_padding_mask)
 
     def decode_step(self, x, x_padding_mask, memory, memory_padding_mask):
         x = self.output_embedding(x)
-        x = x + self.positional_embedding(x)
+        x = x + self.decoder_positional_embedding(x)
         x = self.decoder(x, x_padding_mask, memory, memory_padding_mask)
         x = self.projection(x)
         return x

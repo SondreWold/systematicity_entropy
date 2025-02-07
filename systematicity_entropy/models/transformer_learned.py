@@ -313,9 +313,9 @@ class PositionalEncoding(nn.Module):
         self.pe = nn.Embedding(max_len, hidden_size)
 
     def forward(self, x):
-        return x + self.pe(self.position[:,x.size(1)])
+        return x + self.pe(self.position[:, x.size(1)])
 
 
 if __name__ == "__main__":
-    model = Transformer(22, 32, 2, 256, 0.2, 2)
+    model = Transformer(22, 32, 2, 256, 0.2, 2, 10000, 32, 32)
     print(model)

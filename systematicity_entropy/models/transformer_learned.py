@@ -102,6 +102,8 @@ class Transformer(nn.Module):
         initrange = 0.1
         self.input_embedding.weight.data.uniform_(-initrange, initrange)
         self.output_embedding.weight.data.uniform_(-initrange, initrange)
+        self.encoder_positional_embedding.pe.weight.uniform_(-initrange, initrange)
+        self.decoder_positional_embedding.pe.weight.uniform_(-initrange, initrange)
         self.projection.bias.data.zero_()
         self.projection.weight.data.uniform_(-initrange, initrange)
 

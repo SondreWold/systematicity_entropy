@@ -2,7 +2,7 @@
 name = "systematicity-entropy"
 version = "0.1.0"
 description = ""
-authors = ["Sondre Wold <sondrewo@uio.no>"]
+authors = ["Sondre Wold <sondrewo@uio.no>", "Lucas Georges Gabriel Charpentier <lgcharpe@uio.no>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -17,6 +17,7 @@ wandb = "^0.17.3"
 pytest = "^8.2.1"
 pre-commit = "^3.7.1"
 nltk = "^3.9.1"
+types-six = "^1.17.0.20241205"
 
 [tool.isort]
 profile = "black"

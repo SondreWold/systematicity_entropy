@@ -1,1 +1,0 @@
-WANDB_MODE=disabled python systematicity_entropy/eval.py --model_path systematicity_entropy/trained_models/test_model/final_model.pt --val_path data/eight_verbs/datasets/low_uniform.txt --task scan --hidden_size 128 --layers 2 --type van

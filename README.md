@@ -14,4 +14,19 @@ Entropy</h1>
     </p>
   </div>
 </div>
+<be>
+    
+<p align="center">
+  <b>Sondre Wold, Lucas Georges Gabriel Charpentier, Étienne Simon </b>
+</p>
+
+<p align="center">
+  <i>
+    University of Oslo<br>
+  </i>
+  <br>
+</p>
 <br>
+<p align="center">
+  <a href=""><b>Paper</b></a><br>
+</p>

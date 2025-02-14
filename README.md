@@ -7,7 +7,7 @@ Entropy</h1>
 
 <p align="center">
   <i>
-    University of Oslo<br>
+    Language Technology Group, University of Oslo<br>
   </i>
   <br>
 </p>

@@ -3,14 +3,14 @@
 # Experiment 1
 These files were created by first creating all possible trees from the CFG.
 In this complete data, we then sampled 6000 instances of the dataset where
-jump always appears in the first embedded sentence for "and" and in the
-second embedded sentence for "after":
-- jump after x
+jump always appears in the one embedded sentence for "and" and in the
+other embedded sentence for "after":
 - x and jump
+- jump after x
 
 In the test set, we always have:
-- x after jump
 - jump and x
+- x after jump
 
 This first dataset is the degenerate case (H=0).
 The low, medium, high prefixes refers to the number of samples in the
@@ -30,7 +30,7 @@ description of the generation procedure can be found there.
 In this experiment, the restricted verb is "lunge". 
 
 The test set always have:
-- lunge after x
 - x and lunge
+- lunge after x
 
 While the training set never has these combinations.

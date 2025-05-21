@@ -13,7 +13,7 @@ Entropy</h1>
 </p>
 <br>
 <p align="center">
-  <a href=""><b>Paper</b></a><br>
+  <a href="https://arxiv.org/abs/2505.13089"><b>ACL 2025: Findings</b></a><br>
 </p>
 
 <p align="center">
